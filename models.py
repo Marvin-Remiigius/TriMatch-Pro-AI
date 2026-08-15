@@ -1,5 +1,5 @@
 from datetime import date
-from typing import Optional
+from typing import Literal, Optional, Union
 
 from pydantic import BaseModel
 
@@ -34,3 +34,23 @@ class Patient(BaseModel):
     labs: list[LabResult] = []
     medications: list[str] = []
     vitals: Vitals = Vitals()
+
+
+class Criterion(BaseModel):
+    id: str
+    type: Literal["inclusion", "exclusion"]
+    text: str
+    field: Optional[str] = None
+    operator: Optional[str] = None
+    value: Optional[Union[float, str, bool]] = None
+    unit: Optional[str] = None
+    needs_review: bool = False
+    reason: Optional[str] = None
+
+
+class ParseCriteriaRequest(BaseModel):
+    text: str
+
+
+class ParseCriteriaResponse(BaseModel):
+    criteria: list[Criterion]

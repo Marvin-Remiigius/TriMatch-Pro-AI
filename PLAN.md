@@ -62,19 +62,23 @@ Design principles that win this track:
 - [x] `GET /patients` and `GET /patients/{id}` added to verify the store;
   404 confirmed for an unknown id.
 
-### 3. Criteria parser — CORE COMPONENT — NEXT
-`POST /parse-criteria` that takes raw eligibility text and uses an LLM to
-extract a list of structured rules, each like:
-```json
-{"id": "c1", "type": "inclusion", "text": "HbA1c > 7.0%",
- "field": "lab.hba1c", "operator": ">", "value": 7.0, "unit": "%"}
-```
-- Prompt the LLM to return ONLY JSON; parse safely, handle malformed output.
-- Mark criteria it can't structure as `"needs_review": true` rather than
-  guessing — these get surfaced to a human, not silently dropped.
-- This is the "wow" component. Spend your time here.
+### 3. Criteria parser — CORE COMPONENT — DONE
+- [x] `POST /parse-criteria` (`{"text": "<raw eligibility text>"}`) uses
+  Gemini (`gemini-2.5-flash`, `llm.py`) to extract structured rules.
+- [x] JSON mode (`response_mime_type: application/json`) plus a fallback
+  `Criterion` with `needs_review=True` for LLM call failures, malformed
+  JSON, or items that fail Pydantic validation.
+- [x] Criteria that are compound/subjective/procedural are flagged
+  `needs_review: true` with a `reason`, not guessed.
+- [x] Tested against a hand-written mix (clean + vague criteria) and the
+  real NCT04280705 eligibility text end-to-end: clean criteria like
+  `eGFR < 30` structured correctly; compound/subjective ones (informed
+  consent, "symptoms suggestive of", multi-condition OR blocks) correctly
+  flagged for review instead of guessed.
+- Note: using Gemini instead of Claude for this project (free-tier key
+  available); `GEMINI_API_KEY` required in `.env` (see `.env.example`).
 
-### 4. Matching engine — CORE COMPONENT
+### 4. Matching engine — CORE COMPONENT — NEXT
 `POST /match` that takes a patient + a trial's structured rules and returns,
 for each criterion: `pass` / `fail` / `unknown`, the patient value used, and
 a one-line reason.

@@ -1,8 +1,12 @@
 import httpx
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 
-from models import Patient
+from llm import parse_criteria
+from models import ParseCriteriaRequest, ParseCriteriaResponse, Patient
 from patients import get_patient, load_patients
+
+load_dotenv()
 
 app = FastAPI()
 
@@ -50,3 +54,11 @@ def get_patient_by_id(patient_id: str):
     if patient is None:
         raise HTTPException(status_code=404, detail=f"Patient {patient_id} not found")
     return patient
+
+
+@app.post("/parse-criteria", response_model=ParseCriteriaResponse)
+def parse_criteria_endpoint(request: ParseCriteriaRequest):
+    if not request.text.strip():
+        raise HTTPException(status_code=400, detail="text must not be empty")
+    criteria = parse_criteria(request.text)
+    return ParseCriteriaResponse(criteria=criteria)
