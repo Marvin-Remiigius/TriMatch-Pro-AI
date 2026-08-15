@@ -3,12 +3,14 @@ from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 
 from audit import get_audit_log, get_flagged_for_review, log_match_results
+from db import get_client
 from llm import parse_criteria
 from matching import match_patient
 from models import (
     AuditEntry,
     Candidate,
     CandidateListResponse,
+    ImportTrialResponse,
     MatchRequest,
     MatchResponse,
     ParseCriteriaRequest,
@@ -31,6 +33,27 @@ def health():
 @app.get("/trials/{nct_id}")
 async def get_trial(nct_id: str):
     return await fetch_trial(nct_id)
+
+
+@app.post("/trials/{nct_id}/import", response_model=ImportTrialResponse)
+async def import_trial(nct_id: str):
+    trial = await fetch_trial(nct_id)
+    phases = trial.get("phase") or []
+
+    row = {
+        "nct_id": trial["nct_id"],
+        "title": trial.get("title"),
+        "phase": ", ".join(phases) if phases else None,
+        "status": trial.get("overall_status"),
+        "primary_endpoint": trial.get("primary_endpoint"),
+    }
+
+    client = get_client()
+    client.table("trials").upsert(row, on_conflict="nct_id").execute()
+
+    return ImportTrialResponse(
+        **row, eligibility_criteria=trial.get("eligibility_criteria")
+    )
 
 
 @app.get("/patients", response_model=list[Patient])

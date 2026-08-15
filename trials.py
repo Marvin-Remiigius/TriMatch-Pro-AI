@@ -18,6 +18,10 @@ async def fetch_trial(nct_id: str) -> dict:
     status = protocol.get("statusModule", {})
     design = protocol.get("designModule", {})
     eligibility = protocol.get("eligibilityModule", {})
+    outcomes = protocol.get("outcomesModule", {})
+
+    primary_outcomes = outcomes.get("primaryOutcomes", [])
+    primary_endpoint = primary_outcomes[0]["measure"] if primary_outcomes else None
 
     return {
         "nct_id": identification.get("nctId", nct_id),
@@ -25,4 +29,5 @@ async def fetch_trial(nct_id: str) -> dict:
         "phase": design.get("phases", []),
         "overall_status": status.get("overallStatus"),
         "eligibility_criteria": eligibility.get("eligibilityCriteria"),
+        "primary_endpoint": primary_endpoint,
     }

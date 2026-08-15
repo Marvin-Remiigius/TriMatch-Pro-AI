@@ -8,6 +8,8 @@ evaluating them against patient records.
 
 - Python 3.10+
 - A Gemini API key (free tier) from [Google AI Studio](https://aistudio.google.com/apikey)
+- A Supabase project (URL + anon key from Project Settings -> API), with
+  `migrations/migration_trial_layer.sql` applied via the Supabase SQL editor
 
 ## Setup
 
@@ -17,14 +19,12 @@ py -m venv venv
 pip install -r requirements.txt
 ```
 
-Copy `.env.example` to `.env` and fill in your key:
+Copy `.env.example` to `.env` and fill in your values (`GEMINI_API_KEY`,
+`DATABASE_URL` -- the Supabase project URL, not a `postgresql://` string --
+and `SUPABASE_ANON_KEY`):
 
 ```powershell
 copy .env.example .env
-```
-
-```
-GEMINI_API_KEY=your-key-here
 ```
 
 ## Run
@@ -35,6 +35,18 @@ uvicorn main:app --reload
 
 The API will be available at `http://127.0.0.1:8000`, and the dashboard at
 `http://127.0.0.1:8000/`.
+
+## Database
+
+`migrations/migration_trial_layer.sql` adds the trial/enrollment/compliance
+layer (`trials`, `trial_criteria`, `patient_trial`, `match_results`,
+`trial_metrics`, `audit_log`) on top of an existing Supabase schema that
+already has 1000 synthetic `patients`, their `lab_results`, and `diagnoses`.
+Paste it into the Supabase SQL editor to apply (idempotent, safe to re-run).
+`db.py` holds the shared Supabase client (`SUPABASE_ANON_KEY`, so requests
+are subject to whatever RLS policies are configured on each table). See
+`PLAN.md` for how each table maps to the project's compliance/matching
+requirements, and what's built so far vs. still open.
 
 ## Dashboard
 
@@ -47,7 +59,11 @@ cards; click a card to expand its full per-criterion breakdown.
 
 - `GET /health` — returns `{"status": "ok"}`
 - `GET /trials/{nct_id}` — fetches a trial from ClinicalTrials.gov (title,
-  phase, status, raw eligibility criteria)
+  phase, status, primary endpoint, raw eligibility criteria)
+- `POST /trials/{nct_id}/import` — fetches a trial from ClinicalTrials.gov
+  and upserts it into the Supabase `trials` table (`nct_id`, `title`,
+  `phase`, `status`, `primary_endpoint`); returns the raw eligibility text
+  in the response so you can see what's about to be parsed
 - `GET /patients` — lists synthetic patients
 - `GET /patients/{id}` — fetches one synthetic patient
 - `POST /parse-criteria` — `{"text": "<raw eligibility text>"}`, uses Gemini

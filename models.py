@@ -103,3 +103,12 @@ class AuditEntry(BaseModel):
     verdict: Literal["pass", "fail", "unknown"]
     patient_value: Optional[Union[float, str, bool, list]] = None
     reason: str
+
+
+class ImportTrialResponse(BaseModel):
+    nct_id: str
+    title: Optional[str] = None
+    phase: Optional[str] = None
+    status: Optional[str] = None
+    primary_endpoint: Optional[str] = None
+    eligibility_criteria: Optional[str] = None

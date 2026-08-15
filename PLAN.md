@@ -6,10 +6,26 @@ trial eligibility criteria into machine-checkable rules and evaluating them
 against structured patient records — with a per-criterion, source-cited
 explanation for every decision.
 
+## Where things stand (2026-08-16)
+
+**Phase 1** (below) is a complete, working, in-memory demo: 5 synthetic
+patients, ClinicalTrials.gov fetch, Gemini-based criteria parsing, a
+deterministic matching engine, a ranked candidate dashboard, and an audit
+log. It still runs (`uvicorn main:app --reload`) and is a good fallback demo.
+
+**Phase 2** supersedes it as the actual plan going forward. After a demo,
+judges asked how this scales to real matching efficiency, daily lab report
+ingestion, old-vs-new lab comparison, millions of records, trial progress
+tracking, compliance, and a real DB schema tying trials + patients + daily
+reports + compliance together. Phase 2 answers those by moving persistence
+into Supabase (Postgres) with a real schema, real scale (1000 synthetic
+patients + lab results already loaded), and the same audit-first design
+principles from Phase 1, applied at that scale. See the **Phase 2** section
+below for the schema, judge-question mapping, and current progress.
+
 ## How to use this file
 Work one step at a time. After each step: run it, confirm it works, then
 `git commit`. Do not skip ahead or build multiple steps in one prompt.
-Steps 3 and 5 are the core of the project — keep everything else simple.
 
 ---
 
@@ -37,7 +53,7 @@ Design principles that win this track:
 
 ---
 
-## Steps
+## Phase 1 — in-memory MVP demo (complete, kept as fallback)
 
 ### 0. Project scaffold — DONE
 - [x] venv, FastAPI app, `/health` returns `{"status": "ok"}`
@@ -159,7 +175,121 @@ Design principles that win this track:
 
 ---
 
-## Status: all steps (0-7) complete.
+## Status: Phase 1 (steps 0-7) complete and kept as a working fallback demo.
+
+---
+
+## Phase 2 — Supabase-backed trial / enrollment / compliance layer
+
+### Why this exists
+Judges asked seven questions Phase 1's in-memory design doesn't answer at
+scale. Each maps to a specific table in
+`migrations/migration_trial_layer.sql` (already applied to the live
+Supabase project, on top of an existing `patients`/`lab_results`/
+`diagnoses` schema with 1000 synthetic patients already loaded):
+
+| Judge question | Answered by |
+|---|---|
+| How patients are matched efficiently | `trials`, `trial_criteria`, `match_results` + indexes on `patients(age)`, `diagnoses(diagnosis_code)`, `lab_results(patient_id, test_code, test_date DESC)` |
+| How daily reports are processed | `lab_results` — append-only, one row per report/test |
+| How old vs new lab results are compared | `patient_trial.baseline_date` anchors "baseline" vs later `lab_results(test_date)` rows for the same `patient_id` + `test_code` |
+| How millions of reports/data are managed | Pre-aggregated `trial_metrics` (dashboards read this, not raw history) + the indexes above, not full-table scans |
+| How trial progress is tracked | `trial_metrics` (enrolled, active, dropouts, success_rate) |
+| How compliance is maintained | `patient_trial` (consent/enrollment state machine), `match_results.source_lab_result_id` (every verdict cites its source row), `audit_log` (append-only, never updated/deleted) |
+| How the DB is structured around trials + patients + daily reports + compliance | The full `migrations/migration_trial_layer.sql` schema |
+
+### Design principle carried over from Phase 1
+The LLM's only job is extraction (free text → structured `trial_criteria`
+rows). It never decides eligibility. Matching itself stays plain
+deterministic Python comparing values against thresholds, same as Phase 1's
+`matching.py` — that split is what makes the system auditable, and it's the
+strongest answer to the compliance question. Reusing the already-tested
+Gemini setup from Phase 1 (`llm.py`) rather than adding a second LLM
+provider for this.
+
+### Steps
+
+#### 1. Migration — DONE
+- [x] `migrations/migration_trial_layer.sql` — `trials`, `trial_criteria`,
+  `patient_trial`, `match_results`, `trial_metrics`, `audit_log`, plus
+  indexes. Applied directly via the Supabase SQL editor (idempotent).
+- [x] Confirmed live: all 5 new tables plus the pre-existing `patients`
+  (1000 rows), `lab_results` (1000 rows), `diagnoses` tables are reachable
+  via the anon key.
+
+#### 2. Trial import — DONE
+- [x] `db.py` — shared Supabase client (`DATABASE_URL` + `SUPABASE_ANON_KEY`
+  via `python-dotenv`, same pattern as `GEMINI_API_KEY`).
+- [x] `trials.py`'s `fetch_trial` extended to also pull `primary_endpoint`
+  from `outcomesModule.primaryOutcomes[0].measure`.
+- [x] `POST /trials/{nct_id}/import` fetches the trial and upserts
+  `nct_id`/`title`/`phase` (joined from the phases list)/`status`/
+  `primary_endpoint` into `trials` (`on_conflict="nct_id"`); returns the raw
+  eligibility criteria text in the response.
+- [x] Tested against `NCT04280705`: row upserted correctly, verified by a
+  direct Supabase read; re-importing the same trial confirmed true upsert
+  (row count stayed at 1, no duplicate). Bad NCT id still 404s before
+  touching the DB.
+- Note: the migration's `updated_at DEFAULT now()` only fires on insert,
+  not update — a re-import doesn't currently bump `updated_at`. Not fixed
+  yet (would need a trigger); flagged for later if the "last synced" story
+  matters for compliance.
+
+#### 3. Criteria parser → `trial_criteria` — NEXT
+Reuse Phase 1's `llm.py`/`parse_criteria` (Gemini, already tested and field
+-whitelisted) instead of a new Anthropic-based parser. New endpoint
+`POST /trials/{nct_id}/parse-criteria`:
+- Re-fetch (or accept) the trial's raw eligibility text.
+- Run it through `parse_criteria` (already returns `Criterion` objects with
+  `type`/`field`/`operator`/`value`/`unit`/`needs_review`/`reason`).
+- Delete existing `trial_criteria` rows for this `nct_id`, then insert the
+  parsed ones (`raw_text` = `Criterion.text`, `type`, `field`, `operator`,
+  `value` as text, `unit`, `needs_review`).
+- Response: inserted criteria + counts (total/inclusion/exclusion/
+  needs_review).
+- Sanity check after parsing: do parsed `field` values (e.g. `lab.hba1c`)
+  actually line up with `lab_results.test_code` values in the real data? If
+  not, matching silently returns `unknown` for everything — check this
+  before trusting results.
+
+#### 4. Matching engine → `match_results` — NEXT
+Reuse Phase 1's `matching.py` logic (already deterministic, already tested)
+but read from Supabase instead of the in-memory patient store, and write
+each `CriterionMatch` as a `match_results` row with `source_lab_result_id`
+set to the actual `lab_results` row that was checked — that FK is the
+citation that makes a verdict auditable, not just the `reason` text.
+
+#### 5. Ranked candidates at scale — NEXT
+Coarse SQL filter first (indexed `age`/`diagnosis_code` range/equality
+checks) to cut 1000 patients down before running the deterministic
+per-criterion evaluation on the survivors — this is what makes "efficient
+matching" a demo, not a claim.
+
+#### 6. `trial_metrics` + progress dashboard — NEXT
+Incrementally updated `enrolled`/`active`/`dropouts`/`success_rate` per
+trial, read by the dashboard instead of aggregating `match_results`/
+`patient_trial` on every page load.
+
+#### 7. `patient_trial` enrollment/consent flow — NEXT
+Invitation → accept/decline → consent → enrolled → withdrawn state machine.
+`baseline_date` gets set at enrollment and anchors old-vs-new lab
+comparisons against later `lab_results` rows.
+
+#### 8. Researcher/patient portal — NOT STARTED, large scope
+The full 19-step flow (researcher login, protocol upload, invitations,
+patient accept/decline, document review, lab upload for source data
+verification, T&Cs, participation confirmation, new lab reports during the
+trial, baseline-vs-latest comparison, cumulative deviation, phase
+advancement) is the long-term target this schema supports, but is a much
+bigger build (auth, two user roles, file uploads) than anything above.
+Not scoped in detail yet — revisit once steps 3-7 are solid.
+
+#### 9. `audit_log` (DB-backed) — NOT STARTED
+Phase 1's `audit.py` is in-memory and process-local. Migrating match
+decisions (and eventually consent actions) into the real `audit_log` table
+makes the audit trail durable and queryable outside the app process — do
+this once match results are actually being written to `match_results`
+(step 4), so there's real data to log.
 
 ---
 
@@ -169,10 +299,15 @@ Design principles that win this track:
 3. Expand one patient → every criterion with pass/fail/unknown + why.
 4. Point out an `unknown` and explain: the system flags missing data instead
    of guessing — the coordinator decides. That's the compliance story.
+5. (Phase 2) Point at `match_results.source_lab_result_id` and explain: every
+   verdict cites the exact lab row that justified it, not just a reason
+   string — that's source data verification, not just an audit note.
 
 ## Guardrails / notes to self
 - Commit after every working step.
-- Turn OFF auto-accept edits before touching the matching engine (step 4) so
-  you review changes to core logic.
+- Turn OFF auto-accept edits before touching the matching engine so you
+  review changes to core logic.
 - All patient data is synthetic — no real PHI, ever.
-- Don't gold-plate steps 1, 2, 6. Time goes to 3, 4, 5.
+- Keep the LLM scoped to extraction only; matching stays deterministic
+  Python. Don't let a second LLM provider creep in for something Gemini
+  already does (parsing).
