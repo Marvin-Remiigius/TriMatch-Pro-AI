@@ -108,71 +108,59 @@ def resolve_db_field(client, patient_id: str, field: str):
     return None, False, None
 
 
-def evaluate_db_criterion(client, patient_id: str, criterion_row: dict):
-    """Returns (CriterionMatch, source_lab_result_id)."""
+def evaluate_db_criterion(client, patient_id: str, criterion_row: dict) -> CriterionMatch:
     criterion_id = str(criterion_row["criterion_id"])
     ctype = criterion_row["type"]
     text = criterion_row.get("raw_text") or ""
     field = criterion_row.get("field")
 
     if criterion_row.get("needs_review"):
-        return (
-            CriterionMatch(
-                id=criterion_id,
-                type=ctype,
-                text=text,
-                field=field,
-                verdict="unknown",
-                reason="Criterion could not be structured; needs human review.",
-            ),
-            None,
+        return CriterionMatch(
+            id=criterion_id,
+            type=ctype,
+            text=text,
+            field=field,
+            verdict="unknown",
+            reason="Criterion could not be structured; needs human review.",
         )
 
     operator = criterion_row.get("operator")
     value = _parse_stored_value(criterion_row.get("value"))
 
     if not field or not operator or value is None:
-        return (
-            CriterionMatch(
-                id=criterion_id,
-                type=ctype,
-                text=text,
-                field=field,
-                verdict="unknown",
-                reason="Criterion is missing field/operator/value.",
-            ),
-            None,
+        return CriterionMatch(
+            id=criterion_id,
+            type=ctype,
+            text=text,
+            field=field,
+            verdict="unknown",
+            reason="Criterion is missing field/operator/value.",
         )
 
     patient_value, found, source_lab_result_id = resolve_db_field(client, patient_id, field)
 
     if not found:
-        return (
-            CriterionMatch(
-                id=criterion_id,
-                type=ctype,
-                text=text,
-                field=field,
-                verdict="unknown",
-                reason=f"Patient has no data for '{field}'.",
-            ),
-            None,
+        return CriterionMatch(
+            id=criterion_id,
+            type=ctype,
+            text=text,
+            field=field,
+            verdict="unknown",
+            reason=f"Patient has no data for '{field}'.",
         )
 
     op = _normalize_op(operator)
     condition_true, error = _evaluate_condition(patient_value, op, value)
     if error:
-        return (
-            CriterionMatch(
-                id=criterion_id,
-                type=ctype,
-                text=text,
-                field=field,
-                verdict="unknown",
-                patient_value=patient_value,
-                reason=error,
-            ),
-            source_lab_result_id,
+        return CriterionMatch(
+            id=criterion_id,
+            type=ctype,
+            text=text,
+            field=field,
+            verdict="unknown",
+            patient_value=patient_value,
+            source_lab_result_id=source_lab_result_id,
+            reason=error,
         )
 
     if ctype == "inclusion":
@@ -185,17 +173,15 @@ def evaluate_db_criterion(client, patient_id: str, criterion_row: dict):
         f"{'meets' if condition_true else 'does not meet'} "
         f"'{operator} {value}'"
     )
-    return (
-        CriterionMatch(
-            id=criterion_id,
-            type=ctype,
-            text=text,
-            field=field,
-            verdict=verdict,
-            patient_value=patient_value,
-            reason=reason,
-        ),
-        source_lab_result_id,
+    return CriterionMatch(
+        id=criterion_id,
+        type=ctype,
+        text=text,
+        field=field,
+        verdict=verdict,
+        patient_value=patient_value,
+        source_lab_result_id=source_lab_result_id,
+        reason=reason,
     )
 
 
@@ -209,12 +195,7 @@ def match_patient_db(client, patient_id: str, nct_id: str, criteria_rows=None):
         criteria_res = client.table("trial_criteria").select("*").eq("nct_id", nct_id).execute()
         criteria_rows = criteria_res.data
 
-    results = []
-    sources = []
-    for row in criteria_rows:
-        match, source = evaluate_db_criterion(client, patient_id, row)
-        results.append(match)
-        sources.append(source)
+    results = [evaluate_db_criterion(client, patient_id, row) for row in criteria_rows]
 
     if any(r.verdict == "fail" for r in results):
         overall = "ineligible"
@@ -232,10 +213,10 @@ def match_patient_db(client, patient_id: str, nct_id: str, criteria_rows=None):
             "criterion_id": int(r.id),
             "verdict": r.verdict,
             "patient_value_used": _stringify(r.patient_value),
-            "source_lab_result_id": source,
+            "source_lab_result_id": r.source_lab_result_id,
             "reason": r.reason,
         }
-        for r, source in zip(results, sources)
+        for r in results
     ]
     if match_rows:
         client.table("match_results").insert(match_rows).execute()

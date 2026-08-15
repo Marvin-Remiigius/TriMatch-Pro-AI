@@ -48,12 +48,19 @@ are subject to whatever RLS policies are configured on each table). See
 `PLAN.md` for how each table maps to the project's compliance/matching
 requirements, and what's built so far vs. still open.
 
-## Dashboard
+## Dashboards
 
-Open `http://127.0.0.1:8000/` (`static/index.html`), enter an NCT id (e.g.
-`NCT04280705`), and click "Load candidates". This calls
-`/trials/{nct_id}/candidates` and renders the trial plus ranked patient
-cards; click a card to expand its full per-criterion breakdown.
+- `http://127.0.0.1:8000/` (`static/index.html`) — Phase 1 fallback demo,
+  in-memory 5-patient store. Enter an NCT id (e.g. `NCT04280705`) and click
+  "Load candidates".
+- `http://127.0.0.1:8000/researcher.html` — Phase 2 researcher dashboard,
+  live against the real Supabase data (1000 patients). Enter an NCT id and
+  click "Load trial"; click a ranked candidate to see its full per-criterion
+  breakdown, including the source `lab_result` citation behind every
+  lab-based verdict. Trials without a clean age/diagnosis criterion (like
+  `NCT04280705`) fall back to matching the full patient pool and can take
+  up to ~30-60s to load — this is a known scale limitation, not a bug (see
+  `PLAN.md` step 5).
 
 ## Endpoints
 
@@ -64,6 +71,18 @@ cards; click a card to expand its full per-criterion breakdown.
   and upserts it into the Supabase `trials` table (`nct_id`, `title`,
   `phase`, `status`, `primary_endpoint`); returns the raw eligibility text
   in the response so you can see what's about to be parsed
+- `POST /trials/{nct_id}/parse-criteria` — parses the trial's eligibility
+  text with the same Gemini parser as `/parse-criteria` below, and replaces
+  (delete-then-insert) that trial's `trial_criteria` rows in Supabase
+- `POST /trials/{nct_id}/match/{patient_id}` — deterministically matches
+  one real Supabase patient against the trial's parsed criteria, writes
+  `match_results` (citing the exact `lab_results` row behind any lab-based
+  verdict), and returns the same shape as `/match` below
+- `GET /trials/{nct_id}/db-candidates` — coarse-filters the 1000-patient
+  pool via indexed SQL (age range, required diagnosis) where possible, then
+  fully matches and ranks the survivors. Query params: `limit` (returned
+  list size, default 50), `max_evaluate` (cap on how many survivors get
+  fully matched, default 200)
 - `GET /patients` — lists synthetic patients
 - `GET /patients/{id}` — fetches one synthetic patient
 - `POST /parse-criteria` — `{"text": "<raw eligibility text>"}`, uses Gemini

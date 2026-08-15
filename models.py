@@ -63,6 +63,7 @@ class CriterionMatch(BaseModel):
     field: Optional[str] = None
     verdict: Literal["pass", "fail", "unknown"]
     patient_value: Optional[Union[float, str, bool, list]] = None
+    source_lab_result_id: Optional[int] = None
     reason: str
 
 
@@ -137,6 +138,8 @@ class ParseCriteriaToDBResponse(BaseModel):
 
 class DBCandidateSummary(BaseModel):
     patient_id: str
+    age: Optional[int] = None
+    sex: Optional[str] = None
     overall: Literal["eligible", "ineligible", "needs more data"]
     pass_count: int
     fail_count: int

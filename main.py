@@ -146,12 +146,26 @@ def get_db_candidates(nct_id: str, limit: int = 50, max_evaluate: int = _MAX_EVA
     coarse_filtered_count = len(candidate_ids)
     to_evaluate = candidate_ids[:max_evaluate]
 
+    demographics = {}
+    if to_evaluate:
+        demo_rows = (
+            client.table("patients")
+            .select("patient_id, age, gender")
+            .in_("patient_id", to_evaluate)
+            .execute()
+            .data
+        )
+        demographics = {r["patient_id"]: (r["age"], r["gender"]) for r in demo_rows}
+
     candidates = []
     for pid in to_evaluate:
         overall, results = match_patient_db(client, pid, nct_id, criteria_rows=criteria_rows)
+        age, sex = demographics.get(pid, (None, None))
         candidates.append(
             DBCandidateSummary(
                 patient_id=pid,
+                age=age,
+                sex=sex,
                 overall=overall,
                 pass_count=sum(1 for r in results if r.verdict == "pass"),
                 fail_count=sum(1 for r in results if r.verdict == "fail"),

@@ -366,6 +366,44 @@ provider for this.
   to include age/diagnosis; broader coverage (labs, other operators) is a
   possible future enhancement, not built now.
 
+#### 5a. Researcher dashboard (single screen) — DONE
+- [x] `static/researcher.html` — a single, dependency-free HTML/CSS/JS page
+  (dark, restrained, hairline dividers, mono type for all data/IDs/
+  citations, muted verdict colors) served alongside Phase 1's dashboard by
+  the same `StaticFiles` mount, at `/researcher.html`. Consumes only
+  existing endpoints (`GET /trials/{nct_id}`, `GET
+  /trials/{nct_id}/db-candidates`, `POST /trials/{nct_id}/match/
+  {patient_id}`) — no new routes, no DB schema changes.
+- [x] Trial header (NCT id input, title/phase/status, inline calm error for
+  a bad id) → ranked candidate list (funnel stat, mono tally, verdict
+  badge, age/sex) → click-through per-criterion detail panel (grouped
+  inclusion/exclusion, verdict pill, patient value, source citation,
+  reason).
+- [x] Two small **additive** backend changes, made deliberately and flagged
+  rather than done silently, because the design required data the API
+  didn't yet surface: `CriterionMatch` gained `source_lab_result_id`
+  (folded directly into `db_matching.evaluate_db_criterion`'s return value,
+  which also simplified `match_patient_db` — no more parallel `sources`
+  list); `DBCandidateSummary` gained `age`/`sex`, populated via one bulk
+  `patients` lookup per `/db-candidates` call (not N+1). No endpoint
+  URLs/methods changed, no DB columns added — both are backward-compatible
+  response fields.
+- [x] Tested live in a real browser (Claude in Chrome), per the brief's own
+  test requirement: loaded NCT04280705, confirmed the funnel stat
+  ("150 / 1000 patients evaluated · 1000 matched the coarse filter"),
+  clicked into a candidate and confirmed needs_review criteria render
+  `UNKNOWN` (amber); used the page's own `selectCandidate()` function to
+  jump straight to the known low-eGFR patient (`f67b56e8...`, eGFR 16.05)
+  and confirmed that criterion renders `FAIL` (red) with `value 16.0504`
+  and `source lab_result #1182` — matching the DB row verified in step 4 —
+  visually distinct from the amber unknowns on the same screen. Also
+  confirmed the inline error state for a bad NCT id (no raw JSON, no
+  alert()).
+- Known gap: the mobile breakpoint (`@media max-width: 880px`, grid
+  collapses to one column) uses a standard, well-tested CSS pattern but
+  wasn't pixel-verified in a real narrow viewport — the browser-automation
+  resize didn't propagate to the screenshot tool in this session.
+
 #### 6. `trial_metrics` + progress dashboard — NEXT
 Incrementally updated `enrolled`/`active`/`dropouts`/`success_rate` per
 trial, read by the dashboard instead of aggregating `match_results`/

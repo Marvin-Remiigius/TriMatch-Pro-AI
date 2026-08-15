@@ -1,0 +1,589 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>TriMatch Pro AI — Researcher</title>
+<style>
+  :root {
+    --bg: #0C0D0F;
+    --panel: #141619;
+    --panel-2: #1A1D21;
+    --text: #E6E7E9;
+    --muted: #8A8F98;
+    --muted-2: #5D6169;
+    --line: #22252A;
+    --accent: #5B8DB8;
+    --accent-dim: rgba(91, 141, 184, 0.14);
+    --pass: #7BA786;
+    --pass-dim: rgba(123, 167, 134, 0.14);
+    --fail: #C06A5F;
+    --fail-dim: rgba(192, 106, 95, 0.14);
+    --unknown: #BCA274;
+    --unknown-dim: rgba(188, 162, 116, 0.14);
+    --radius: 3px;
+    --font-ui: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+    --ease: 140ms ease;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+
+  button, input {
+    font-family: inherit;
+    font-size: inherit;
+    color: inherit;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted-2);
+  }
+
+  .mono { font-family: var(--font-mono); }
+
+  /* ---------- Header ---------- */
+
+  header {
+    border-bottom: 1px solid var(--line);
+    padding: 1.1rem 1.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem 1.5rem;
+  }
+
+  .brand {
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+  }
+
+  .brand .dim { color: var(--muted); font-weight: 400; }
+
+  .load-row {
+    display: flex;
+    gap: 0.5rem;
+    flex: 1 1 320px;
+    max-width: 460px;
+  }
+
+  #nctInput {
+    flex: 1;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 0.5rem 0.7rem;
+    color: var(--text);
+  }
+
+  #nctInput::placeholder { color: var(--muted-2); }
+
+  #nctInput:focus-visible { border-color: var(--accent); }
+
+  #loadBtn {
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 0.5rem 0.95rem;
+    cursor: pointer;
+    transition: border-color var(--ease), color var(--ease);
+    color: var(--text);
+  }
+
+  #loadBtn:hover { border-color: var(--muted); }
+  #loadBtn:disabled { color: var(--muted-2); cursor: default; }
+
+  .trial-info {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+
+  .trial-info .title {
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 32ch;
+  }
+
+  .trial-info .meta {
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .status-line {
+    padding: 0 1.5rem;
+    min-height: 0;
+  }
+
+  .status-msg {
+    color: var(--muted);
+    font-size: 12.5px;
+    padding: 0.6rem 0;
+  }
+
+  .error-msg {
+    color: var(--fail);
+    font-size: 12.5px;
+    padding: 0.6rem 0;
+    border-top: 1px solid var(--line);
+  }
+
+  /* ---------- Workspace ---------- */
+
+  .workspace {
+    display: grid;
+    grid-template-columns: minmax(280px, 380px) 1fr;
+    min-height: calc(100vh - 60px);
+  }
+
+  @media (max-width: 880px) {
+    .workspace {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .panel {
+    padding: 1.25rem 1.5rem;
+  }
+
+  .candidates-panel {
+    border-right: 1px solid var(--line);
+  }
+
+  @media (max-width: 880px) {
+    .candidates-panel {
+      border-right: none;
+      border-bottom: 1px solid var(--line);
+    }
+  }
+
+  /* ---------- Funnel stat ---------- */
+
+  .funnel {
+    margin-bottom: 1.25rem;
+  }
+
+  .funnel-figure {
+    font-family: var(--font-mono);
+    font-size: 30px;
+    font-weight: 500;
+    color: var(--accent);
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+  }
+
+  .funnel-figure .of {
+    color: var(--muted);
+    font-size: 18px;
+    font-weight: 400;
+  }
+
+  .funnel-label {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 0.15rem;
+  }
+
+  .funnel-sub {
+    color: var(--muted-2);
+    font-size: 11.5px;
+    margin-top: 0.35rem;
+    font-family: var(--font-mono);
+  }
+
+  /* ---------- Candidate list ---------- */
+
+  .candidate-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .candidate {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 0.65rem 0.8rem;
+    cursor: pointer;
+    transition: border-color var(--ease), background var(--ease);
+  }
+
+  .candidate:hover { border-color: var(--muted-2); }
+
+  .candidate.selected {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+  }
+
+  .candidate-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .candidate-id {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+  }
+
+  .candidate-demo {
+    color: var(--muted);
+    font-size: 11.5px;
+    margin-top: 0.15rem;
+    font-family: var(--font-mono);
+  }
+
+  .candidate-tally {
+    color: var(--muted);
+    font-size: 11px;
+    font-family: var(--font-mono);
+    margin-top: 0.35rem;
+  }
+
+  .badge {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 0.15rem 0.45rem;
+    border-radius: var(--radius);
+    white-space: nowrap;
+  }
+
+  .badge-eligible { background: var(--pass-dim); color: var(--pass); }
+  .badge-ineligible { background: var(--fail-dim); color: var(--fail); }
+  .badge-needs_more_data { background: var(--unknown-dim); color: var(--unknown); }
+
+  /* ---------- Detail panel ---------- */
+
+  .detail-empty {
+    color: var(--muted);
+    font-size: 13px;
+    padding-top: 0.25rem;
+  }
+
+  .detail-header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    padding-bottom: 0.9rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .detail-header .id {
+    font-family: var(--font-mono);
+    font-size: 15px;
+  }
+
+  .detail-header .demo {
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+  }
+
+  .group-label {
+    margin: 1.4rem 0 0.6rem;
+  }
+
+  .group-label:first-of-type { margin-top: 0; }
+
+  .criterion {
+    border-top: 1px solid var(--line);
+    padding: 0.85rem 0;
+  }
+
+  .criterion:first-of-type { border-top: none; }
+
+  .criterion-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .criterion-text {
+    flex: 1;
+    font-size: 13px;
+  }
+
+  .verdict-pill {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 0.18rem 0.5rem;
+    border-radius: var(--radius);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .verdict-pass { background: var(--pass-dim); color: var(--pass); }
+  .verdict-fail { background: var(--fail-dim); color: var(--fail); }
+  .verdict-unknown { background: var(--unknown-dim); color: var(--unknown); }
+
+  .criterion-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1rem;
+    margin-top: 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+  }
+
+  .criterion-meta .kv-label {
+    color: var(--muted-2);
+  }
+
+  .criterion-meta .kv-value {
+    color: var(--muted);
+  }
+
+  .criterion-reason {
+    color: var(--muted);
+    font-size: 12.5px;
+    margin-top: 0.4rem;
+  }
+
+  .skeleton {
+    color: var(--muted-2);
+    font-size: 12.5px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">TriMatch <span class="dim">Researcher</span></div>
+  <div class="load-row">
+    <input type="text" id="nctInput" placeholder="NCT ID, e.g. NCT04280705" />
+    <button id="loadBtn">Load trial</button>
+  </div>
+  <div class="trial-info" id="trialInfo"></div>
+</header>
+
+<div class="status-line" id="statusLine"></div>
+
+<main class="workspace">
+  <section class="panel candidates-panel">
+    <div id="funnelArea"></div>
+    <div class="candidate-list" id="candidateList"></div>
+  </section>
+
+  <section class="panel detail-panel" id="detailPanel">
+    <div class="detail-empty">Select a candidate to see the full breakdown.</div>
+  </section>
+</main>
+
+<script>
+  const nctInput = document.getElementById('nctInput');
+  const loadBtn = document.getElementById('loadBtn');
+  const trialInfo = document.getElementById('trialInfo');
+  const statusLine = document.getElementById('statusLine');
+  const funnelArea = document.getElementById('funnelArea');
+  const candidateList = document.getElementById('candidateList');
+  const detailPanel = document.getElementById('detailPanel');
+
+  let currentNctId = null;
+  let selectedPatientId = null;
+
+  function esc(str) {
+    if (str === null || str === undefined) return '';
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function shortId(id) {
+    return id.length > 10 ? id.slice(0, 8) : id;
+  }
+
+  function setStatus(message) {
+    statusLine.innerHTML = message ? `<div class="status-msg">${esc(message)}</div>` : '';
+  }
+
+  function setError(message) {
+    statusLine.innerHTML = `<div class="error-msg">${esc(message)}</div>`;
+  }
+
+  function badgeClass(overall) {
+    return 'badge-' + overall.replace(/ /g, '_');
+  }
+
+  async function loadTrial() {
+    const nctId = nctInput.value.trim();
+    if (!nctId) return;
+
+    loadBtn.disabled = true;
+    trialInfo.innerHTML = '';
+    funnelArea.innerHTML = '';
+    candidateList.innerHTML = '';
+    detailPanel.innerHTML = '<div class="detail-empty">Select a candidate to see the full breakdown.</div>';
+    selectedPatientId = null;
+    setStatus('Loading trial…');
+
+    try {
+      const res = await fetch(`/trials/${encodeURIComponent(nctId)}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.detail || 'No trial found for that ID.');
+        loadBtn.disabled = false;
+        return;
+      }
+
+      currentNctId = data.nct_id;
+      const phase = Array.isArray(data.phase) ? data.phase.join(', ') : data.phase;
+      trialInfo.innerHTML = `
+        <span class="title">${esc(data.title || data.nct_id)}</span>
+        <span class="meta">${esc(data.nct_id)}${phase ? ' · ' + esc(phase) : ''}${data.overall_status ? ' · ' + esc(data.overall_status) : ''}</span>
+      `;
+
+      await loadCandidates(currentNctId);
+    } catch (err) {
+      setError('Could not reach the server. Try again.');
+    } finally {
+      loadBtn.disabled = false;
+    }
+  }
+
+  async function loadCandidates(nctId) {
+    setStatus('Matching candidates against this trial’s criteria…');
+    candidateList.innerHTML = '';
+    funnelArea.innerHTML = '';
+
+    try {
+      const res = await fetch(`/trials/${encodeURIComponent(nctId)}/db-candidates?limit=50&max_evaluate=150`);
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.detail || 'No parsed criteria for this trial yet.');
+        return;
+      }
+
+      setStatus('');
+
+      funnelArea.innerHTML = `
+        <div class="funnel">
+          <div class="funnel-figure">${data.evaluated_count}<span class="of"> / ${data.total_patients}</span></div>
+          <div class="funnel-label">patients evaluated</div>
+          <div class="funnel-sub">${data.coarse_filtered_count} matched the coarse filter · showing ${data.returned}</div>
+        </div>
+      `;
+
+      if (data.candidates.length === 0) {
+        candidateList.innerHTML = '<div class="detail-empty">No candidates matched.</div>';
+        return;
+      }
+
+      candidateList.innerHTML = data.candidates.map(c => {
+        const demo = [c.age !== null && c.age !== undefined ? c.age : null, c.sex].filter(Boolean).join(' · ');
+        return `
+          <button class="candidate" data-pid="${esc(c.patient_id)}">
+            <div class="candidate-top">
+              <span class="candidate-id mono">${esc(shortId(c.patient_id))}</span>
+              <span class="badge ${badgeClass(c.overall)}">${esc(c.overall)}</span>
+            </div>
+            ${demo ? `<div class="candidate-demo">${esc(demo)}</div>` : ''}
+            <div class="candidate-tally">${c.pass_count} pass · ${c.fail_count} fail · ${c.unknown_count} unknown</div>
+          </button>
+        `;
+      }).join('');
+
+      candidateList.querySelectorAll('.candidate').forEach(btn => {
+        btn.addEventListener('click', () => selectCandidate(btn.dataset.pid));
+      });
+    } catch (err) {
+      setError('Could not reach the server. Try again.');
+    }
+  }
+
+  async function selectCandidate(patientId) {
+    selectedPatientId = patientId;
+    candidateList.querySelectorAll('.candidate').forEach(btn => {
+      btn.classList.toggle('selected', btn.dataset.pid === patientId);
+    });
+
+    detailPanel.innerHTML = '<div class="skeleton">Loading breakdown…</div>';
+
+    try {
+      const res = await fetch(`/trials/${encodeURIComponent(currentNctId)}/match/${encodeURIComponent(patientId)}`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) {
+        detailPanel.innerHTML = `<div class="detail-empty">${esc(data.detail || 'Could not load this candidate.')}</div>`;
+        return;
+      }
+
+      const inclusions = data.results.filter(r => r.type === 'inclusion');
+      const exclusions = data.results.filter(r => r.type === 'exclusion');
+
+      const renderCriterion = (r) => `
+        <div class="criterion">
+          <div class="criterion-top">
+            <div class="criterion-text">${esc(r.text)}</div>
+            <span class="verdict-pill verdict-${esc(r.verdict)}">${esc(r.verdict)}</span>
+          </div>
+          <div class="criterion-meta">
+            ${r.patient_value !== null && r.patient_value !== undefined ? `<span><span class="kv-label">value </span><span class="kv-value">${esc(Array.isArray(r.patient_value) ? r.patient_value.join(', ') : r.patient_value)}</span></span>` : ''}
+            ${r.source_lab_result_id !== null && r.source_lab_result_id !== undefined ? `<span><span class="kv-label">source </span><span class="kv-value">lab_result #${esc(r.source_lab_result_id)}</span></span>` : ''}
+          </div>
+          <div class="criterion-reason">${esc(r.reason)}</div>
+        </div>
+      `;
+
+      detailPanel.innerHTML = `
+        <div class="detail-header">
+          <span class="id">${esc(shortId(patientId))}</span>
+          <span class="demo">${esc(data.overall)}</span>
+        </div>
+        ${inclusions.length ? `<div class="eyebrow group-label">Inclusion</div>${inclusions.map(renderCriterion).join('')}` : ''}
+        ${exclusions.length ? `<div class="eyebrow group-label">Exclusion</div>${exclusions.map(renderCriterion).join('')}` : ''}
+      `;
+    } catch (err) {
+      detailPanel.innerHTML = '<div class="detail-empty">Could not reach the server. Try again.</div>';
+    }
+  }
+
+  loadBtn.addEventListener('click', loadTrial);
+  nctInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') loadTrial();
+  });
+</script>
+
+</body>
+</html>
