@@ -5,6 +5,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 
 from audit import get_audit_log, get_flagged_for_review, log_match_results
+from coarse_filter import coarse_filter_patient_ids
 from db import get_client
 from db_matching import match_patient_db
 from llm import parse_criteria
@@ -13,6 +14,8 @@ from models import (
     AuditEntry,
     Candidate,
     CandidateListResponse,
+    DBCandidateListResponse,
+    DBCandidateSummary,
     ImportTrialResponse,
     MatchRequest,
     MatchResponse,
@@ -104,15 +107,70 @@ def match_db_patient(nct_id: str, patient_id: str):
     if not patient_check.data:
         raise HTTPException(status_code=404, detail=f"Patient {patient_id} not found")
 
-    criteria_check = client.table("trial_criteria").select("criterion_id").eq("nct_id", nct_id).limit(1).execute()
-    if not criteria_check.data:
+    criteria_rows = client.table("trial_criteria").select("*").eq("nct_id", nct_id).execute().data
+    if not criteria_rows:
         raise HTTPException(
             status_code=404,
             detail=f"No parsed criteria for trial {nct_id} -- call POST /trials/{nct_id}/parse-criteria first",
         )
 
-    overall, results = match_patient_db(client, patient_id, nct_id)
+    overall, results = match_patient_db(client, patient_id, nct_id, criteria_rows=criteria_rows)
     return MatchResponse(patient_id=patient_id, overall=overall, results=results)
+
+
+_MAX_EVALUATE_DEFAULT = 200
+
+
+@app.get("/trials/{nct_id}/db-candidates", response_model=DBCandidateListResponse)
+def get_db_candidates(nct_id: str, limit: int = 50, max_evaluate: int = _MAX_EVALUATE_DEFAULT):
+    client = get_client()
+
+    criteria_rows = client.table("trial_criteria").select("*").eq("nct_id", nct_id).execute().data
+    if not criteria_rows:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No parsed criteria for trial {nct_id} -- call POST /trials/{nct_id}/parse-criteria first",
+        )
+
+    total_patients = (
+        client.table("patients").select("patient_id", count="exact").limit(0).execute().count
+    )
+
+    safe_ids = coarse_filter_patient_ids(client, criteria_rows)
+    if safe_ids is None:
+        all_ids = client.table("patients").select("patient_id").limit(2000).execute().data
+        candidate_ids = sorted(r["patient_id"] for r in all_ids)
+    else:
+        candidate_ids = sorted(safe_ids)
+
+    coarse_filtered_count = len(candidate_ids)
+    to_evaluate = candidate_ids[:max_evaluate]
+
+    candidates = []
+    for pid in to_evaluate:
+        overall, results = match_patient_db(client, pid, nct_id, criteria_rows=criteria_rows)
+        candidates.append(
+            DBCandidateSummary(
+                patient_id=pid,
+                overall=overall,
+                pass_count=sum(1 for r in results if r.verdict == "pass"),
+                fail_count=sum(1 for r in results if r.verdict == "fail"),
+                unknown_count=sum(1 for r in results if r.verdict == "unknown"),
+            )
+        )
+
+    candidates.sort(
+        key=lambda c: (_OVERALL_RANK[c.overall], -c.pass_count, c.unknown_count, c.fail_count)
+    )
+
+    return DBCandidateListResponse(
+        nct_id=nct_id,
+        total_patients=total_patients,
+        coarse_filtered_count=coarse_filtered_count,
+        evaluated_count=len(candidates),
+        returned=min(limit, len(candidates)),
+        candidates=candidates[:limit],
+    )
 
 
 @app.get("/patients", response_model=list[Patient])

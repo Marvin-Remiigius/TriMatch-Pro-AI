@@ -322,11 +322,49 @@ provider for this.
 - Scope note: this matches one patient at a time, correct but not yet
   optimized for 1000 patients — batching/coarse-filtering is step 5.
 
-#### 5. Ranked candidates at scale — NEXT
-Coarse SQL filter first (indexed `age`/`diagnosis_code` range/equality
-checks) to cut 1000 patients down before running the deterministic
-per-criterion evaluation on the survivors — this is what makes "efficient
-matching" a demo, not a claim.
+#### 5. Ranked candidates at scale — DONE
+- [x] `coarse_filter.py` — narrows the candidate pool via indexed SQL
+  before the expensive per-criterion evaluation runs, for the two
+  criterion types the plan called out: `age` range/equality, and a
+  required `diagnosis.icd10` (inclusion + contains/in/==). Deliberately
+  conservative: only narrows on criteria where the outcome is unambiguous
+  (never "unknown"), so under-filtering (skipping a criterion type this
+  module doesn't handle) is always safe — the full matcher still evaluates
+  it correctly afterward. Exclusion-type criteria are handled by inverting
+  the operator (`>` becomes `<=`, etc.), mirroring the same inclusion/
+  exclusion inversion rule proven in step 4, not a new rule.
+- [x] `match_patient_db` (step 4) extended to accept pre-fetched
+  `criteria_rows` so matching many patients against one trial doesn't
+  re-fetch the identical criteria list per patient.
+- [x] `GET /trials/{nct_id}/db-candidates` (`limit`, `max_evaluate` query
+  params) — coarse-filters, then fully matches (and writes `match_results`
+  for, via step 4's function) each survivor up to `max_evaluate`, ranks
+  them (same key as Phase 1: overall bucket, then passes, unknowns,
+  fails), and returns a lightweight summary list (no full per-criterion
+  breakdown — that's a separate `/match/{patient_id}` call, step 4) along
+  with `total_patients`/`coarse_filtered_count`/`evaluated_count`/
+  `returned` so nothing is silently dropped from view.
+- [x] Caught and fixed a real bug during testing: `patients.age` is a
+  Postgres `integer` column, and passing a Python float (`18.0`) 500'd
+  with `invalid input syntax for type integer`. Fixed by casting to `int`
+  for the age comparison.
+- [x] Verified the coarse filter's correctness against direct SQL
+  cross-checks, not just "it returns 200": a synthetic trial with age
+  18-40 (308 patients) AND required diagnosis I10 (120 patients) narrowed
+  to exactly 43 candidates, and every one of them came back `eligible`
+  with all 3 criteria passing — the coarse filter's guarantee matched the
+  full matcher's actual verdict. A second synthetic trial (exclusion `age
+  > 65`) narrowed to exactly 662 (`patients.age <= 65`, cross-checked via
+  direct SQL), confirming the exclusion-inversion path too. Both test
+  trials cleaned up (`trials`/`trial_criteria`/`match_results` rows
+  deleted) after verification. Full regression across every prior
+  endpoint (Phase 1 and Phase 2) passed.
+- Known limitation, not fixed: `NCT04280705`'s only clean criterion is
+  `lab.egfr` (not age/diagnosis), so the coarse filter doesn't narrow it
+  at all — falls back to all 1000 patients, capped by `max_evaluate`
+  (default 200). The filter only helps trials whose clean criteria happen
+  to include age/diagnosis; broader coverage (labs, other operators) is a
+  possible future enhancement, not built now.
 
 #### 6. `trial_metrics` + progress dashboard — NEXT
 Incrementally updated `enrolled`/`active`/`dropouts`/`success_rate` per

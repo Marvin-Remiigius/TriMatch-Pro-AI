@@ -133,3 +133,20 @@ class ParseCriteriaToDBResponse(BaseModel):
     exclusion: int
     needs_review: int
     criteria: list[TrialCriterionRow]
+
+
+class DBCandidateSummary(BaseModel):
+    patient_id: str
+    overall: Literal["eligible", "ineligible", "needs more data"]
+    pass_count: int
+    fail_count: int
+    unknown_count: int
+
+
+class DBCandidateListResponse(BaseModel):
+    nct_id: str
+    total_patients: int
+    coarse_filtered_count: int
+    evaluated_count: int
+    returned: int
+    candidates: list[DBCandidateSummary]

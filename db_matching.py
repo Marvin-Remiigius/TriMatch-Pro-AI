@@ -199,12 +199,15 @@ def evaluate_db_criterion(client, patient_id: str, criterion_row: dict):
     )
 
 
-def match_patient_db(client, patient_id: str, nct_id: str):
+def match_patient_db(client, patient_id: str, nct_id: str, criteria_rows=None):
     """Evaluates every trial_criteria row for nct_id against a Supabase
     patient, writes the results into match_results (delete-then-insert for
-    this patient+trial), and returns (overall, results)."""
-    criteria_res = client.table("trial_criteria").select("*").eq("nct_id", nct_id).execute()
-    criteria_rows = criteria_res.data
+    this patient+trial), and returns (overall, results). Pass criteria_rows
+    when matching many patients against the same trial in one call, so each
+    patient doesn't re-fetch the identical criteria list."""
+    if criteria_rows is None:
+        criteria_res = client.table("trial_criteria").select("*").eq("nct_id", nct_id).execute()
+        criteria_rows = criteria_res.data
 
     results = []
     sources = []
