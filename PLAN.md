@@ -101,11 +101,24 @@ Design principles that win this track:
   labs correctly surface as `unknown`/"needs more data" rather than a
   guessed fail, and an unknown patient_id 404s.
 
-### 5. Ranked candidate view — NEXT
-`GET /trials/{nct_id}/candidates` that runs every patient against a trial and
-returns them ranked (e.g. by number of criteria passed, unknowns as a
-tiebreaker), each with the per-criterion breakdown from step 4.
-- This is what a trial coordinator would actually look at.
+### 5. Ranked candidate view — DONE
+- [x] `GET /trials/{nct_id}/candidates` fetches the trial (`trials.py`,
+  factored out of the step-1 handler), parses its eligibility text once
+  (step 3), then runs every synthetic patient through the matching engine
+  (step 4) and returns them ranked, each with its full per-criterion
+  breakdown.
+- [x] Ranking key: overall bucket first (`eligible` < `needs more data` <
+  `ineligible`), then more passes first, then fewer unknowns, then fewer
+  fails, as a tiebreak.
+- [x] Response also includes the parsed criteria list (so a client doesn't
+  need a second `/parse-criteria` call to show what the ranking is based
+  on).
+- [x] Tested against NCT04280705: unknown NCT id still 404s; real trial
+  returns 20 parsed criteria and 5 ranked candidates in the exact order
+  the sort key predicts (verified by hand against pass/unknown/fail
+  counts) — all `ineligible` here since none of the synthetic patients
+  have lab-confirmed SARS-CoV-2, which is itself a correct result, not a
+  bug.
 
 ### 6. Frontend dashboard (if time)
 A simple page: pick a trial → see ranked candidates → expand a candidate to

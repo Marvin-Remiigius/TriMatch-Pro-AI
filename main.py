@@ -1,17 +1,23 @@
-import httpx
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 
 from llm import parse_criteria
 from matching import match_patient
-from models import MatchRequest, MatchResponse, ParseCriteriaRequest, ParseCriteriaResponse, Patient
+from models import (
+    Candidate,
+    CandidateListResponse,
+    MatchRequest,
+    MatchResponse,
+    ParseCriteriaRequest,
+    ParseCriteriaResponse,
+    Patient,
+)
 from patients import get_patient, load_patients
+from trials import fetch_trial
 
 load_dotenv()
 
 app = FastAPI()
-
-CLINICAL_TRIALS_API = "https://clinicaltrials.gov/api/v2/studies"
 
 
 @app.get("/health")
@@ -21,27 +27,7 @@ def health():
 
 @app.get("/trials/{nct_id}")
 async def get_trial(nct_id: str):
-    async with httpx.AsyncClient() as client:
-        response = await client.get(f"{CLINICAL_TRIALS_API}/{nct_id}")
-
-    if response.status_code in (400, 404):
-        raise HTTPException(status_code=404, detail=f"Trial {nct_id} not found")
-    response.raise_for_status()
-
-    data = response.json()
-    protocol = data["protocolSection"]
-    identification = protocol.get("identificationModule", {})
-    status = protocol.get("statusModule", {})
-    design = protocol.get("designModule", {})
-    eligibility = protocol.get("eligibilityModule", {})
-
-    return {
-        "nct_id": identification.get("nctId", nct_id),
-        "title": identification.get("briefTitle"),
-        "phase": design.get("phases", []),
-        "overall_status": status.get("overallStatus"),
-        "eligibility_criteria": eligibility.get("eligibilityCriteria"),
-    }
+    return await fetch_trial(nct_id)
 
 
 @app.get("/patients", response_model=list[Patient])
@@ -72,3 +58,39 @@ def match_endpoint(request: MatchRequest):
         raise HTTPException(status_code=404, detail=f"Patient {request.patient_id} not found")
     overall, results = match_patient(patient, request.criteria)
     return MatchResponse(patient_id=patient.id, overall=overall, results=results)
+
+
+_OVERALL_RANK = {"eligible": 0, "needs more data": 1, "ineligible": 2}
+
+
+@app.get("/trials/{nct_id}/candidates", response_model=CandidateListResponse)
+async def get_candidates(nct_id: str):
+    trial = await fetch_trial(nct_id)
+    eligibility_text = trial.get("eligibility_criteria")
+    if not eligibility_text:
+        raise HTTPException(
+            status_code=422, detail=f"Trial {nct_id} has no eligibility criteria text"
+        )
+    criteria = parse_criteria(eligibility_text)
+
+    candidates = []
+    for patient in load_patients():
+        overall, results = match_patient(patient, criteria)
+        candidates.append(
+            Candidate(
+                patient_id=patient.id,
+                overall=overall,
+                pass_count=sum(1 for r in results if r.verdict == "pass"),
+                fail_count=sum(1 for r in results if r.verdict == "fail"),
+                unknown_count=sum(1 for r in results if r.verdict == "unknown"),
+                results=results,
+            )
+        )
+
+    candidates.sort(
+        key=lambda c: (_OVERALL_RANK[c.overall], -c.pass_count, c.unknown_count, c.fail_count)
+    )
+
+    return CandidateListResponse(
+        nct_id=trial["nct_id"], title=trial["title"], criteria=criteria, candidates=candidates
+    )

@@ -49,3 +49,6 @@ The API will be available at `http://127.0.0.1:8000`.
   `/parse-criteria`), deterministically evaluates each criterion against the
   patient (`pass`/`fail`/`unknown` + reason) and returns an overall verdict
   of `eligible`, `ineligible`, or `needs more data`
+- `GET /trials/{nct_id}/candidates` — fetches the trial, parses its
+  eligibility criteria once, matches every synthetic patient against them,
+  and returns the parsed criteria plus patients ranked best-candidate-first

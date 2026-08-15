@@ -74,3 +74,19 @@ class MatchResponse(BaseModel):
     patient_id: str
     overall: Literal["eligible", "ineligible", "needs more data"]
     results: list[CriterionMatch]
+
+
+class Candidate(BaseModel):
+    patient_id: str
+    overall: Literal["eligible", "ineligible", "needs more data"]
+    pass_count: int
+    fail_count: int
+    unknown_count: int
+    results: list[CriterionMatch]
+
+
+class CandidateListResponse(BaseModel):
+    nct_id: str
+    title: Optional[str] = None
+    criteria: list[Criterion]
+    candidates: list[Candidate]
