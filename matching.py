@@ -111,6 +111,7 @@ def evaluate_criterion(criterion: Criterion, patient: Patient) -> CriterionMatch
             id=criterion.id,
             type=criterion.type,
             text=criterion.text,
+            field=criterion.field,
             verdict="unknown",
             reason=criterion.reason or "Criterion could not be structured; needs human review.",
         )
@@ -120,6 +121,7 @@ def evaluate_criterion(criterion: Criterion, patient: Patient) -> CriterionMatch
             id=criterion.id,
             type=criterion.type,
             text=criterion.text,
+            field=criterion.field,
             verdict="unknown",
             reason="Criterion is missing field/operator/value.",
         )
@@ -132,6 +134,7 @@ def evaluate_criterion(criterion: Criterion, patient: Patient) -> CriterionMatch
             id=criterion.id,
             type=criterion.type,
             text=criterion.text,
+            field=criterion.field,
             verdict="unknown",
             reason=f"Patient has no data for '{criterion.field}'.",
         )
@@ -142,6 +145,7 @@ def evaluate_criterion(criterion: Criterion, patient: Patient) -> CriterionMatch
             id=criterion.id,
             type=criterion.type,
             text=criterion.text,
+            field=criterion.field,
             verdict="unknown",
             patient_value=patient_value,
             reason=error,
@@ -164,6 +168,7 @@ def evaluate_criterion(criterion: Criterion, patient: Patient) -> CriterionMatch
         id=criterion.id,
         type=criterion.type,
         text=criterion.text,
+        field=criterion.field,
         verdict=verdict,
         patient_value=patient_value,
         reason=reason,

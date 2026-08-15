@@ -53,10 +53,19 @@ cards; click a card to expand its full per-criterion breakdown.
 - `POST /parse-criteria` — `{"text": "<raw eligibility text>"}`, uses Gemini
   to extract structured rules; criteria that can't be reduced to a single
   field/operator/value are flagged `needs_review` instead of guessed
-- `POST /match` — `{"patient_id": "P001", "criteria": [...]}` (criteria from
-  `/parse-criteria`), deterministically evaluates each criterion against the
-  patient (`pass`/`fail`/`unknown` + reason) and returns an overall verdict
-  of `eligible`, `ineligible`, or `needs more data`
+- `POST /match` — `{"patient_id": "P001", "criteria": [...], "nct_id": "..."}`
+  (criteria from `/parse-criteria`; `nct_id` optional, for the audit trail),
+  deterministically evaluates each criterion against the patient
+  (`pass`/`fail`/`unknown` + source field + reason) and returns an overall
+  verdict of `eligible`, `ineligible`, or `needs more data`. Every criterion
+  decision is logged.
 - `GET /trials/{nct_id}/candidates` — fetches the trial, parses its
   eligibility criteria once, matches every synthetic patient against them,
-  and returns the parsed criteria plus patients ranked best-candidate-first
+  and returns the parsed criteria plus patients ranked best-candidate-first.
+  Every criterion decision is logged.
+- `GET /audit-log` — every logged match decision (timestamp, trial, patient,
+  criterion, source field, verdict, reason), newest first. Optional query
+  params: `nct_id`, `patient_id`, `limit`.
+- `GET /flagged-for-review` — same as `/audit-log` but restricted to
+  `unknown` verdicts (criteria that couldn't be structured, or where the
+  patient is missing the needed data) — the compliance/human-review queue.

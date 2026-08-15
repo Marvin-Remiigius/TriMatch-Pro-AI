@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from typing import Literal, Optional, Union
 
 from pydantic import BaseModel
@@ -60,6 +60,7 @@ class CriterionMatch(BaseModel):
     id: str
     type: Literal["inclusion", "exclusion"]
     text: str
+    field: Optional[str] = None
     verdict: Literal["pass", "fail", "unknown"]
     patient_value: Optional[Union[float, str, bool, list]] = None
     reason: str
@@ -68,6 +69,7 @@ class CriterionMatch(BaseModel):
 class MatchRequest(BaseModel):
     patient_id: str
     criteria: list[Criterion]
+    nct_id: Optional[str] = None
 
 
 class MatchResponse(BaseModel):
@@ -90,3 +92,14 @@ class CandidateListResponse(BaseModel):
     title: Optional[str] = None
     criteria: list[Criterion]
     candidates: list[Candidate]
+
+
+class AuditEntry(BaseModel):
+    timestamp: datetime
+    nct_id: Optional[str] = None
+    patient_id: str
+    criterion_id: str
+    field: Optional[str] = None
+    verdict: Literal["pass", "fail", "unknown"]
+    patient_value: Optional[Union[float, str, bool, list]] = None
+    reason: str

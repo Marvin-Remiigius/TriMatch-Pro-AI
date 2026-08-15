@@ -2,9 +2,11 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 
+from audit import get_audit_log, get_flagged_for_review, log_match_results
 from llm import parse_criteria
 from matching import match_patient
 from models import (
+    AuditEntry,
     Candidate,
     CandidateListResponse,
     MatchRequest,
@@ -58,6 +60,7 @@ def match_endpoint(request: MatchRequest):
     if patient is None:
         raise HTTPException(status_code=404, detail=f"Patient {request.patient_id} not found")
     overall, results = match_patient(patient, request.criteria)
+    log_match_results(patient.id, results, nct_id=request.nct_id)
     return MatchResponse(patient_id=patient.id, overall=overall, results=results)
 
 
@@ -77,6 +80,7 @@ async def get_candidates(nct_id: str):
     candidates = []
     for patient in load_patients():
         overall, results = match_patient(patient, criteria)
+        log_match_results(patient.id, results, nct_id=nct_id)
         candidates.append(
             Candidate(
                 patient_id=patient.id,
@@ -95,6 +99,20 @@ async def get_candidates(nct_id: str):
     return CandidateListResponse(
         nct_id=trial["nct_id"], title=trial["title"], criteria=criteria, candidates=candidates
     )
+
+
+@app.get("/audit-log", response_model=list[AuditEntry])
+def audit_log_endpoint(
+    nct_id: str | None = None, patient_id: str | None = None, limit: int | None = None
+):
+    return get_audit_log(nct_id=nct_id, patient_id=patient_id, limit=limit)
+
+
+@app.get("/flagged-for-review", response_model=list[AuditEntry])
+def flagged_for_review_endpoint(
+    nct_id: str | None = None, patient_id: str | None = None, limit: int | None = None
+):
+    return get_flagged_for_review(nct_id=nct_id, patient_id=patient_id, limit=limit)
 
 
 app.mount("/", StaticFiles(directory="static", html=True), name="static")

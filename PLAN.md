@@ -135,10 +135,31 @@ Design principles that win this track:
   order, expanded P001's breakdown (readable, color-coded, legible), and
   confirmed the error panel for a bad NCT id.
 
-### 7. Compliance / audit polish (if time)
-- Log every match decision with a timestamp and the source field used.
-- Add a "flagged for review" list aggregating all `needs_review` criteria
-  and all `unknown` verdicts across patients.
+### 7. Compliance / audit polish (if time) — DONE
+- [x] `audit.py` — every match decision (one per criterion per patient, for
+  both `/match` and `/candidates`) is appended to an in-memory log with a
+  UTC timestamp, `nct_id` (when known), `patient_id`, `criterion_id`, the
+  **source field used** (`field`, e.g. `lab.hba1c`), verdict, patient
+  value, and reason. Added `field` to `CriterionMatch` so the matching
+  engine's output itself now names the field it checked, not just the
+  audit layer.
+- [x] `GET /audit-log` — full log, newest first, filterable by
+  `nct_id`/`patient_id`/`limit`.
+- [x] `GET /flagged-for-review` — same filters, restricted to `unknown`
+  verdicts, which is exactly the union of `needs_review` criteria (always
+  evaluate to `unknown`, step 4) and missing-patient-data unknowns — no
+  separate needs_review store required.
+- [x] `MatchRequest` gained an optional `nct_id` so direct `/match` calls
+  can still be tied to a trial in the audit trail.
+- [x] Tested: two direct `/match` calls (P001, P003) produced 10 audit
+  entries, correctly filtered down to the 4 that were actually unknown
+  (2 missing-lab-data, 2 needs_review); a real `/candidates` call against
+  NCT04280705 logged 100 entries (20 criteria x 5 patients) and
+  `/flagged-for-review` correctly returned only the unknown subset.
+
+---
+
+## Status: all steps (0-7) complete.
 
 ---
 
