@@ -43,16 +43,15 @@ Design principles that win this track:
 - [x] venv, FastAPI app, `/health` returns `{"status": "ok"}`
 - [x] requirements.txt (pinned), .gitignore, git init + first commit
 
-### 1. Fetch a trial and its criteria — NEXT
-Endpoint `GET /trials/{nct_id}` that calls the ClinicalTrials.gov API v2
-(`https://clinicaltrials.gov/api/v2/studies/{nct_id}`) and returns title,
-phase, overall status, and the raw eligibility criteria text.
-- Use `httpx`; add it to requirements.txt.
-- Return a proper 404 when the NCT ID doesn't exist.
-- Test with a real ID, e.g. `NCT04280705`.
-- Keep this simple — it's plumbing, not the showcase.
+### 1. Fetch a trial and its criteria — DONE
+- [x] `GET /trials/{nct_id}` calls the ClinicalTrials.gov API v2 and returns
+  title, phase, overall status, and raw eligibility criteria text.
+- [x] `httpx` added to requirements.txt.
+- [x] Returns a proper 404 (upstream returns 400 for a bad NCT ID; mapped
+  both 400 and 404 from upstream to a 404 here).
+- [x] Tested with `NCT04280705` (real) and `NCT00000000` (nonexistent).
 
-### 2. Patient schema + synthetic data
+### 2. Patient schema + synthetic data — NEXT
 A `Patient` model (Pydantic) with: id, age, sex, diagnoses (ICD-10 codes +
 labels), labs (name, value, unit, date), medications, key vitals.
 - Hand-write 3–5 synthetic patients as JSON so you control the test cases.
