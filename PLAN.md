@@ -120,11 +120,20 @@ Design principles that win this track:
   have lab-confirmed SARS-CoV-2, which is itself a correct result, not a
   bug.
 
-### 6. Frontend dashboard (if time)
-A simple page: pick a trial → see ranked candidates → expand a candidate to
-see every criterion, its verdict, the source value, and the reason.
-- Plain HTML/JS served by FastAPI, or a small React app — keep it lightweight.
-- The expandable per-criterion breakdown IS the demo. Make that legible.
+### 6. Frontend dashboard (if time) — DONE
+- [x] `static/index.html` — a single-file, dependency-free HTML/JS/CSS page
+  (no build step) served by FastAPI via `StaticFiles` mounted at `/`
+  (mounted last, after all API routes, so it never shadows them).
+- [x] Flow: enter an NCT ID → `GET /trials/{id}/candidates` → trial header
+  + ranked candidate cards (patient id, overall badge, pass/fail/unknown
+  counts) → click a card to expand a full criterion table (id, type,
+  criterion text, color-coded verdict, patient value, reason).
+- [x] Loading state (LLM parse can take up to ~30s) and an inline error
+  panel for bad NCT ids.
+- [x] Verified live in a real browser (not just curl) via Claude in
+  Chrome: loaded NCT04280705, confirmed the ranked list matches the API
+  order, expanded P001's breakdown (readable, color-coded, legible), and
+  confirmed the error panel for a bad NCT id.
 
 ### 7. Compliance / audit polish (if time)
 - Log every match decision with a timestamp and the source field used.

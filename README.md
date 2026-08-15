@@ -33,7 +33,15 @@ GEMINI_API_KEY=your-key-here
 uvicorn main:app --reload
 ```
 
-The API will be available at `http://127.0.0.1:8000`.
+The API will be available at `http://127.0.0.1:8000`, and the dashboard at
+`http://127.0.0.1:8000/`.
+
+## Dashboard
+
+Open `http://127.0.0.1:8000/` (`static/index.html`), enter an NCT id (e.g.
+`NCT04280705`), and click "Load candidates". This calls
+`/trials/{nct_id}/candidates` and renders the trial plus ranked patient
+cards; click a card to expand its full per-criterion breakdown.
 
 ## Endpoints
 

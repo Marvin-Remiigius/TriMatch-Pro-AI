@@ -1,5 +1,6 @@
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
 
 from llm import parse_criteria
 from matching import match_patient
@@ -94,3 +95,6 @@ async def get_candidates(nct_id: str):
     return CandidateListResponse(
         nct_id=trial["nct_id"], title=trial["title"], criteria=criteria, candidates=candidates
     )
+
+
+app.mount("/", StaticFiles(directory="static", html=True), name="static")
