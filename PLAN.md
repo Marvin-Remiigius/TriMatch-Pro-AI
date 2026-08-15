@@ -51,14 +51,18 @@ Design principles that win this track:
   both 400 and 404 from upstream to a 404 here).
 - [x] Tested with `NCT04280705` (real) and `NCT00000000` (nonexistent).
 
-### 2. Patient schema + synthetic data — NEXT
-A `Patient` model (Pydantic) with: id, age, sex, diagnoses (ICD-10 codes +
-labels), labs (name, value, unit, date), medications, key vitals.
-- Hand-write 3–5 synthetic patients as JSON so you control the test cases.
-- (Stretch) generate realistic FHIR data with Synthea later.
-- Load them from a JSON file into an in-memory store for now.
+### 2. Patient schema + synthetic data — DONE
+- [x] `Patient` model (Pydantic, in `models.py`): id, age, sex, diagnoses
+  (ICD-10 + label), labs (name, value, unit, date), medications, vitals.
+- [x] 5 hand-written synthetic patients in `data/patients.json`, covering
+  diabetes, COVID-19, asthma, CKD, and pregnancy cases (deliberately chosen
+  to exercise inclusion/exclusion logic later — e.g. P004's low eGFR and
+  P005's pregnancy are built to fail common exclusion criteria).
+- [x] Loaded into an in-memory store (`patients.py`, `lru_cache`-backed).
+- [x] `GET /patients` and `GET /patients/{id}` added to verify the store;
+  404 confirmed for an unknown id.
 
-### 3. Criteria parser — CORE COMPONENT
+### 3. Criteria parser — CORE COMPONENT — NEXT
 `POST /parse-criteria` that takes raw eligibility text and uses an LLM to
 extract a list of structured rules, each like:
 ```json

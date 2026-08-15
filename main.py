@@ -1,6 +1,9 @@
 import httpx
 from fastapi import FastAPI, HTTPException
 
+from models import Patient
+from patients import get_patient, load_patients
+
 app = FastAPI()
 
 CLINICAL_TRIALS_API = "https://clinicaltrials.gov/api/v2/studies"
@@ -34,3 +37,16 @@ async def get_trial(nct_id: str):
         "overall_status": status.get("overallStatus"),
         "eligibility_criteria": eligibility.get("eligibilityCriteria"),
     }
+
+
+@app.get("/patients", response_model=list[Patient])
+def list_patients():
+    return load_patients()
+
+
+@app.get("/patients/{patient_id}", response_model=Patient)
+def get_patient_by_id(patient_id: str):
+    patient = get_patient(patient_id)
+    if patient is None:
+        raise HTTPException(status_code=404, detail=f"Patient {patient_id} not found")
+    return patient

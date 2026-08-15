@@ -1,0 +1,109 @@
+[
+  {
+    "id": "P001",
+    "age": 45,
+    "sex": "M",
+    "diagnoses": [
+      {"icd10": "E11.9", "label": "Type 2 diabetes mellitus without complications"},
+      {"icd10": "I10", "label": "Essential (primary) hypertension"}
+    ],
+    "labs": [
+      {"name": "HbA1c", "value": 8.2, "unit": "%", "date": "2026-06-01"},
+      {"name": "eGFR", "value": 75, "unit": "mL/min/1.73m2", "date": "2026-06-01"}
+    ],
+    "medications": ["metformin", "lisinopril"],
+    "vitals": {
+      "height_cm": 178,
+      "weight_kg": 92,
+      "systolic_bp": 138,
+      "diastolic_bp": 88,
+      "heart_rate": 76,
+      "spo2": 98,
+      "temperature_c": 36.8
+    }
+  },
+  {
+    "id": "P002",
+    "age": 62,
+    "sex": "F",
+    "diagnoses": [
+      {"icd10": "U07.1", "label": "COVID-19"},
+      {"icd10": "E11.9", "label": "Type 2 diabetes mellitus without complications"}
+    ],
+    "labs": [
+      {"name": "HbA1c", "value": 6.5, "unit": "%", "date": "2026-07-10"},
+      {"name": "ALT", "value": 30, "unit": "U/L", "date": "2026-07-10"}
+    ],
+    "medications": ["insulin glargine"],
+    "vitals": {
+      "height_cm": 162,
+      "weight_kg": 70,
+      "systolic_bp": 128,
+      "diastolic_bp": 80,
+      "heart_rate": 92,
+      "spo2": 91,
+      "temperature_c": 38.2
+    }
+  },
+  {
+    "id": "P003",
+    "age": 29,
+    "sex": "M",
+    "diagnoses": [
+      {"icd10": "J45.909", "label": "Unspecified asthma, uncomplicated"}
+    ],
+    "labs": [],
+    "medications": ["albuterol"],
+    "vitals": {
+      "height_cm": 180,
+      "weight_kg": 75,
+      "systolic_bp": 118,
+      "diastolic_bp": 76,
+      "heart_rate": 68,
+      "spo2": 99,
+      "temperature_c": 36.6
+    }
+  },
+  {
+    "id": "P004",
+    "age": 71,
+    "sex": "F",
+    "diagnoses": [
+      {"icd10": "N18.3", "label": "Chronic kidney disease, stage 3"},
+      {"icd10": "I10", "label": "Essential (primary) hypertension"}
+    ],
+    "labs": [
+      {"name": "eGFR", "value": 28, "unit": "mL/min/1.73m2", "date": "2026-05-20"},
+      {"name": "ALT", "value": 22, "unit": "U/L", "date": "2026-05-20"}
+    ],
+    "medications": ["amlodipine"],
+    "vitals": {
+      "height_cm": 158,
+      "weight_kg": 64,
+      "systolic_bp": 150,
+      "diastolic_bp": 92,
+      "heart_rate": 80,
+      "spo2": 96,
+      "temperature_c": 36.9
+    }
+  },
+  {
+    "id": "P005",
+    "age": 34,
+    "sex": "F",
+    "diagnoses": [
+      {"icd10": "Z33.1", "label": "Pregnant state, incidental"}
+    ],
+    "labs": [],
+    "medications": ["prenatal vitamins"],
+    "vitals": {
+      "height_cm": 165,
+      "weight_kg": 68,
+      "systolic_bp": 112,
+      "diastolic_bp": 72,
+      "heart_rate": 78,
+      "spo2": 99,
+      "temperature_c": 36.7
+    }
+  }
+]
