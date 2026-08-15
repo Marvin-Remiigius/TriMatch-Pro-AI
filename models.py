@@ -42,7 +42,7 @@ class Criterion(BaseModel):
     text: str
     field: Optional[str] = None
     operator: Optional[str] = None
-    value: Optional[Union[float, str, bool]] = None
+    value: Optional[Union[float, str, bool, list]] = None
     unit: Optional[str] = None
     needs_review: bool = False
     reason: Optional[str] = None
@@ -54,3 +54,23 @@ class ParseCriteriaRequest(BaseModel):
 
 class ParseCriteriaResponse(BaseModel):
     criteria: list[Criterion]
+
+
+class CriterionMatch(BaseModel):
+    id: str
+    type: Literal["inclusion", "exclusion"]
+    text: str
+    verdict: Literal["pass", "fail", "unknown"]
+    patient_value: Optional[Union[float, str, bool, list]] = None
+    reason: str
+
+
+class MatchRequest(BaseModel):
+    patient_id: str
+    criteria: list[Criterion]
+
+
+class MatchResponse(BaseModel):
+    patient_id: str
+    overall: Literal["eligible", "ineligible", "needs more data"]
+    results: list[CriterionMatch]

@@ -3,7 +3,8 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 
 from llm import parse_criteria
-from models import ParseCriteriaRequest, ParseCriteriaResponse, Patient
+from matching import match_patient
+from models import MatchRequest, MatchResponse, ParseCriteriaRequest, ParseCriteriaResponse, Patient
 from patients import get_patient, load_patients
 
 load_dotenv()
@@ -62,3 +63,12 @@ def parse_criteria_endpoint(request: ParseCriteriaRequest):
         raise HTTPException(status_code=400, detail="text must not be empty")
     criteria = parse_criteria(request.text)
     return ParseCriteriaResponse(criteria=criteria)
+
+
+@app.post("/match", response_model=MatchResponse)
+def match_endpoint(request: MatchRequest):
+    patient = get_patient(request.patient_id)
+    if patient is None:
+        raise HTTPException(status_code=404, detail=f"Patient {request.patient_id} not found")
+    overall, results = match_patient(patient, request.criteria)
+    return MatchResponse(patient_id=patient.id, overall=overall, results=results)

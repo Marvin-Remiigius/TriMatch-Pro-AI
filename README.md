@@ -45,3 +45,7 @@ The API will be available at `http://127.0.0.1:8000`.
 - `POST /parse-criteria` — `{"text": "<raw eligibility text>"}`, uses Gemini
   to extract structured rules; criteria that can't be reduced to a single
   field/operator/value are flagged `needs_review` instead of guessed
+- `POST /match` — `{"patient_id": "P001", "criteria": [...]}` (criteria from
+  `/parse-criteria`), deterministically evaluates each criterion against the
+  patient (`pass`/`fail`/`unknown` + reason) and returns an overall verdict
+  of `eligible`, `ineligible`, or `needs more data`

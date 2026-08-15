@@ -78,17 +78,30 @@ Design principles that win this track:
 - Note: using Gemini instead of Claude for this project (free-tier key
   available); `GEMINI_API_KEY` required in `.env` (see `.env.example`).
 
-### 4. Matching engine — CORE COMPONENT — NEXT
-`POST /match` that takes a patient + a trial's structured rules and returns,
-for each criterion: `pass` / `fail` / `unknown`, the patient value used, and
-a one-line reason.
-- Evaluation is **deterministic** (plain Python rule checks), not LLM — this
-  is what makes it auditable. LLM is only for parsing (step 3).
-- If the patient lacks the data a criterion needs → `unknown`, never `fail`.
-- Overall verdict: eligible only if all inclusions pass and no exclusion
-  fails; otherwise `ineligible` or `needs more data`.
+### 4. Matching engine — CORE COMPONENT — DONE
+- [x] `POST /match` (`{"patient_id", "criteria"}`, `matching.py`) evaluates
+  each criterion deterministically in plain Python (no LLM) and returns
+  `pass`/`fail`/`unknown`, the resolved `patient_value`, and a reason.
+- [x] Field resolver supports `age`, `sex`, `diagnosis.icd10`,
+  `diagnosis.label`, `medication`, `lab.<name>` (most recent by date),
+  `vitals.<name>`; missing data → `unknown`, never guessed.
+- [x] Operators: `>`, `>=`, `<`, `<=`, `==`, `!=`, `in`, `not_in`,
+  `contains`, `not_contains` (plus common aliases like `=`/`gte`).
+- [x] Exclusion semantics inverted from inclusion: for an exclusion
+  criterion, the disqualifying condition being *true* → `fail` (blocks the
+  patient); condition *false* → `pass` (clears it).
+- [x] `needs_review` criteria from step 3 always evaluate to `unknown`,
+  carrying the parser's `reason` through untouched.
+- [x] Overall verdict: any `fail` → `ineligible`; else any `unknown` →
+  `"needs more data"`; else `eligible`.
+- [x] Tested a 5-criterion set (2 clean inclusions, 1 needs_review
+  inclusion, 1 clean exclusion, 1 contains-based exclusion) against all 5
+  synthetic patients — verified P002 fails on HbA1c, P004 and P005 are
+  excluded (CKD eGFR, pregnancy diagnosis via `contains`), P003's missing
+  labs correctly surface as `unknown`/"needs more data" rather than a
+  guessed fail, and an unknown patient_id 404s.
 
-### 5. Ranked candidate view
+### 5. Ranked candidate view — NEXT
 `GET /trials/{nct_id}/candidates` that runs every patient against a trial and
 returns them ranked (e.g. by number of criteria passed, unknowns as a
 tiebreaker), each with the per-criterion breakdown from step 4.
