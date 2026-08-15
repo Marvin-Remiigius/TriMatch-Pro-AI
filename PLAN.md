@@ -282,12 +282,45 @@ provider for this.
   realistic variety for exclusion-criteria demos (35 patients below 30,
   the CKD threshold the COVID trial's exclusion criterion actually uses).
 
-#### 4. Matching engine → `match_results` — NEXT
-Reuse Phase 1's `matching.py` logic (already deterministic, already tested)
-but read from Supabase instead of the in-memory patient store, and write
-each `CriterionMatch` as a `match_results` row with `source_lab_result_id`
-set to the actual `lab_results` row that was checked — that FK is the
-citation that makes a verdict auditable, not just the `reason` text.
+#### 4. Matching engine → `match_results` — DONE
+- [x] `db_matching.py` — reuses Phase 1's pure comparison functions
+  (`_normalize_op`, `_evaluate_condition` imported from `matching.py`, not
+  duplicated) with a new Supabase-backed field resolver
+  (`resolve_db_field`), so the actual comparison logic is identical between
+  Phase 1 and Phase 2, only where the data comes from differs.
+- [x] Field resolver mapping (Phase 1 field name -> real Supabase source):
+  `age`/`sex` -> `patients.age`/`patients.gender` (note: DB column is
+  `gender`, not `sex` -- aliased in the resolver so the parser's field
+  whitelist didn't need to change); `diagnosis.icd10`/`diagnosis.label` ->
+  `diagnoses` table; `medication` -> `medications.drug_name`; `lab.<name>`
+  -> `lab_results` filtered by `test_code` (most recent by `test_date`,
+  with an alias map for spelled-out names like `lab.cholesterol` -> `CHOL`
+  since the parser doesn't always emit the short code); `vitals.<name>` ->
+  `vital_signs`, via an explicit column map (`spo2` ->
+  `oxygen_saturation`, `temperature_c` -> `temperature`, etc.) since that
+  table's column names don't match Phase 1's convention either.
+- [x] `POST /trials/{nct_id}/match/{patient_id}` evaluates every
+  `trial_criteria` row for the trial against one real patient, computes the
+  overall verdict (same any-fail/any-unknown/else-eligible logic as Phase
+  1), and writes `match_results` rows (delete-then-insert, same idempotent
+  pattern as step 3) with `source_lab_result_id` set whenever the
+  criterion resolved through a `lab.*` field.
+- [x] 404s if the patient doesn't exist, and 404s with a clear message if
+  the trial has no parsed criteria yet (tells the caller to call
+  `/parse-criteria` first) rather than silently matching against nothing.
+- [x] Tested against `NCT04280705` with two real patients: one with eGFR
+  16.05 (well under the trial's `< 30` exclusion threshold) correctly came
+  back `fail` on that criterion -> overall `ineligible`; one with eGFR
+  103.9 correctly `pass` -> overall `needs more data` (everything else on
+  this trial is `needs_review`). Verified in the DB directly:
+  `match_results.source_lab_result_id` for the low-eGFR patient's
+  criterion pointed at the exact `lab_results` row (1182) that produced
+  the verdict -- the compliance/source-data-verification citation works
+  end to end, not just in the reason text. Re-matching the same patient
+  confirmed idempotency (still 13 rows, no duplicates). Both error paths
+  (unknown patient, unparsed trial) 404 correctly.
+- Scope note: this matches one patient at a time, correct but not yet
+  optimized for 1000 patients — batching/coarse-filtering is step 5.
 
 #### 5. Ranked candidates at scale — NEXT
 Coarse SQL filter first (indexed `age`/`diagnosis_code` range/equality

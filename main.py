@@ -6,6 +6,7 @@ from fastapi.staticfiles import StaticFiles
 
 from audit import get_audit_log, get_flagged_for_review, log_match_results
 from db import get_client
+from db_matching import match_patient_db
 from llm import parse_criteria
 from matching import match_patient
 from models import (
@@ -91,6 +92,27 @@ async def parse_trial_criteria(nct_id: str):
         needs_review=sum(1 for c in criteria if c.needs_review),
         criteria=[TrialCriterionRow(**row) for row in inserted.data],
     )
+
+
+@app.post("/trials/{nct_id}/match/{patient_id}", response_model=MatchResponse)
+def match_db_patient(nct_id: str, patient_id: str):
+    client = get_client()
+
+    patient_check = (
+        client.table("patients").select("patient_id").eq("patient_id", patient_id).limit(1).execute()
+    )
+    if not patient_check.data:
+        raise HTTPException(status_code=404, detail=f"Patient {patient_id} not found")
+
+    criteria_check = client.table("trial_criteria").select("criterion_id").eq("nct_id", nct_id).limit(1).execute()
+    if not criteria_check.data:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No parsed criteria for trial {nct_id} -- call POST /trials/{nct_id}/parse-criteria first",
+        )
+
+    overall, results = match_patient_db(client, patient_id, nct_id)
+    return MatchResponse(patient_id=patient_id, overall=overall, results=results)
 
 
 @app.get("/patients", response_model=list[Patient])
