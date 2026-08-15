@@ -31,3 +31,16 @@ async def fetch_trial(nct_id: str) -> dict:
         "eligibility_criteria": eligibility.get("eligibilityCriteria"),
         "primary_endpoint": primary_endpoint,
     }
+
+
+def to_trial_row(trial: dict) -> dict:
+    """Shape a fetch_trial() dict into a trials-table row (nct_id/title/
+    phase/status/primary_endpoint)."""
+    phases = trial.get("phase") or []
+    return {
+        "nct_id": trial["nct_id"],
+        "title": trial.get("title"),
+        "phase": ", ".join(phases) if phases else None,
+        "status": trial.get("overall_status"),
+        "primary_endpoint": trial.get("primary_endpoint"),
+    }

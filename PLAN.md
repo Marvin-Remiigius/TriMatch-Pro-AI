@@ -235,22 +235,52 @@ provider for this.
   yet (would need a trigger); flagged for later if the "last synced" story
   matters for compliance.
 
-#### 3. Criteria parser → `trial_criteria` — NEXT
-Reuse Phase 1's `llm.py`/`parse_criteria` (Gemini, already tested and field
--whitelisted) instead of a new Anthropic-based parser. New endpoint
-`POST /trials/{nct_id}/parse-criteria`:
-- Re-fetch (or accept) the trial's raw eligibility text.
-- Run it through `parse_criteria` (already returns `Criterion` objects with
-  `type`/`field`/`operator`/`value`/`unit`/`needs_review`/`reason`).
-- Delete existing `trial_criteria` rows for this `nct_id`, then insert the
-  parsed ones (`raw_text` = `Criterion.text`, `type`, `field`, `operator`,
-  `value` as text, `unit`, `needs_review`).
-- Response: inserted criteria + counts (total/inclusion/exclusion/
-  needs_review).
-- Sanity check after parsing: do parsed `field` values (e.g. `lab.hba1c`)
-  actually line up with `lab_results.test_code` values in the real data? If
-  not, matching silently returns `unknown` for everything — check this
-  before trusting results.
+#### 3. Criteria parser → `trial_criteria` — DONE
+- [x] `POST /trials/{nct_id}/parse-criteria` reuses Phase 1's
+  `llm.py`/`parse_criteria` (Gemini) rather than a second Anthropic-based
+  parser. Fetches the trial, upserts its `trials` row first (FK integrity,
+  so this endpoint doesn't require a prior `/import` call), runs the
+  eligibility text through `parse_criteria`, deletes any existing
+  `trial_criteria` rows for the `nct_id`, and inserts the fresh ones
+  (`raw_text`/`type`/`field`/`operator`/`value` as JSON-encoded text/
+  `unit`/`needs_review`).
+- [x] Response: inserted criteria (with real `criterion_id`s from the DB)
+  plus total/inclusion/exclusion/needs_review counts.
+- [x] Tested against `NCT04280705`: first call hit a transient Gemini
+  hiccup and correctly degraded to a single `needs_review` fallback
+  criterion rather than crashing (proves the Phase 1 fallback path works
+  in the DB-backed flow too); the retry parsed 13 real criteria (8
+  inclusion, 5 exclusion, 12 needs_review, 1 clean `eGFR < 30` exclusion).
+  Delete-then-insert confirmed idempotent — DB row count stayed at 13
+  after the retry, no stale row left from the failed first attempt.
+- [x] Ran the sanity check the step called for: parsed `field` values vs.
+  real `lab_results.test_code` values. Found a real gap — the existing
+  1000-row `lab_results` dataset only had 5 basic tests (Cholesterol,
+  Creatinine, Glucose, Hemoglobin, WBC), so labs like HbA1c/eGFR/ALT/AST
+  that most trial criteria reference had zero matchable data. Resolved by
+  expanding the dataset (see below) rather than constraining the parser,
+  since real trials genuinely need those labs.
+- Note: `trial_criteria` has no `reason` column in the migration schema, so
+  the parser's `needs_review` explanation (e.g. "informed consent is
+  procedural, not measurable") is preserved in the Phase 1 in-memory
+  `Criterion`/API response but is **not** persisted to the DB. Flagged, not
+  fixed — would need an `ALTER TABLE trial_criteria ADD COLUMN reason
+  text` migration if the DB-persisted row needs to carry it too.
+
+#### 3a. Lab data expansion — DONE
+- [x] `scripts/seed_extra_labs.py` — adds one `lab_results` row per patient
+  for HbA1c, eGFR, ALT, AST (matching the existing table's conventions:
+  `lab_report_id` format, `reference_min`/`max`, `abnormal_flag` computed
+  from the value). Purely additive; reversible via
+  `DELETE FROM lab_results WHERE test_code IN ('HBA1C','EGFR','ALT','AST')`.
+- [x] Dry-run tested on 2 patients first (confirmed anon-key write access
+  and schema fit) before running at full scale; those 2 rows were deleted
+  before the real run so nothing was duplicated.
+- [x] Ran against all 1000 patients: 4000 new rows inserted in batches of
+  500. Verified: `lab_results` now has 5000 total rows, each of the 4 new
+  test codes has exactly 1000 rows (one per patient), and eGFR has
+  realistic variety for exclusion-criteria demos (35 patients below 30,
+  the CKD threshold the COVID trial's exclusion criterion actually uses).
 
 #### 4. Matching engine → `match_results` — NEXT
 Reuse Phase 1's `matching.py` logic (already deterministic, already tested)

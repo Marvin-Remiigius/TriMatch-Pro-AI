@@ -1,3 +1,5 @@
+import json
+
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
@@ -15,10 +17,12 @@ from models import (
     MatchResponse,
     ParseCriteriaRequest,
     ParseCriteriaResponse,
+    ParseCriteriaToDBResponse,
     Patient,
+    TrialCriterionRow,
 )
 from patients import get_patient, load_patients
-from trials import fetch_trial
+from trials import fetch_trial, to_trial_row
 
 load_dotenv()
 
@@ -38,21 +42,54 @@ async def get_trial(nct_id: str):
 @app.post("/trials/{nct_id}/import", response_model=ImportTrialResponse)
 async def import_trial(nct_id: str):
     trial = await fetch_trial(nct_id)
-    phases = trial.get("phase") or []
-
-    row = {
-        "nct_id": trial["nct_id"],
-        "title": trial.get("title"),
-        "phase": ", ".join(phases) if phases else None,
-        "status": trial.get("overall_status"),
-        "primary_endpoint": trial.get("primary_endpoint"),
-    }
+    row = to_trial_row(trial)
 
     client = get_client()
     client.table("trials").upsert(row, on_conflict="nct_id").execute()
 
     return ImportTrialResponse(
         **row, eligibility_criteria=trial.get("eligibility_criteria")
+    )
+
+
+@app.post("/trials/{nct_id}/parse-criteria", response_model=ParseCriteriaToDBResponse)
+async def parse_trial_criteria(nct_id: str):
+    trial = await fetch_trial(nct_id)
+    eligibility_text = trial.get("eligibility_criteria")
+    if not eligibility_text:
+        raise HTTPException(
+            status_code=422, detail=f"Trial {nct_id} has no eligibility criteria text"
+        )
+
+    client = get_client()
+    client.table("trials").upsert(to_trial_row(trial), on_conflict="nct_id").execute()
+
+    criteria = parse_criteria(eligibility_text)
+
+    client.table("trial_criteria").delete().eq("nct_id", nct_id).execute()
+
+    rows = [
+        {
+            "nct_id": nct_id,
+            "type": c.type,
+            "raw_text": c.text,
+            "field": c.field,
+            "operator": c.operator,
+            "value": json.dumps(c.value) if c.value is not None else None,
+            "unit": c.unit,
+            "needs_review": c.needs_review,
+        }
+        for c in criteria
+    ]
+    inserted = client.table("trial_criteria").insert(rows).execute()
+
+    return ParseCriteriaToDBResponse(
+        nct_id=nct_id,
+        total=len(criteria),
+        inclusion=sum(1 for c in criteria if c.type == "inclusion"),
+        exclusion=sum(1 for c in criteria if c.type == "exclusion"),
+        needs_review=sum(1 for c in criteria if c.needs_review),
+        criteria=[TrialCriterionRow(**row) for row in inserted.data],
     )
 
 

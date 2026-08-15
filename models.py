@@ -112,3 +112,24 @@ class ImportTrialResponse(BaseModel):
     status: Optional[str] = None
     primary_endpoint: Optional[str] = None
     eligibility_criteria: Optional[str] = None
+
+
+class TrialCriterionRow(BaseModel):
+    criterion_id: Optional[int] = None
+    nct_id: str
+    type: Literal["inclusion", "exclusion"]
+    raw_text: str
+    field: Optional[str] = None
+    operator: Optional[str] = None
+    value: Optional[str] = None
+    unit: Optional[str] = None
+    needs_review: bool = False
+
+
+class ParseCriteriaToDBResponse(BaseModel):
+    nct_id: str
+    total: int
+    inclusion: int
+    exclusion: int
+    needs_review: int
+    criteria: list[TrialCriterionRow]
