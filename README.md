@@ -60,7 +60,12 @@ requirements, and what's built so far vs. still open.
   lab-based verdict. Trials without a clean age/diagnosis criterion (like
   `NCT04280705`) fall back to matching the full patient pool and can take
   up to ~30-60s to load — this is a known scale limitation, not a bug (see
-  `PLAN.md` step 5).
+  `PLAN.md` step 5). The **Trial progress** tab shows enrolled/active/
+  dropout counts, a transparently-defined `success_rate`, and a
+  baseline-vs-latest lab readout per enrolled patient with source
+  citations — currently only populated for `NCT04280705` (see
+  `scripts/seed_enrollment.py`; run it against another trial's NCT id to
+  demo progress there too).
 
 ## Endpoints
 
@@ -83,6 +88,20 @@ requirements, and what's built so far vs. still open.
   fully matches and ranks the survivors. Query params: `limit` (returned
   list size, default 50), `max_evaluate` (cap on how many survivors get
   fully matched, default 200)
+- `GET /trials/{nct_id}/progress` — for every patient enrolled
+  (`patient_trial.status` in `enrolled`/`withdrawn`) in the trial, computes
+  baseline (nearest lab reading on/before `baseline_date`) vs. latest (most
+  recent reading) per test, with both source `lab_result_id`s, a deviation,
+  and a status of `improved`/`worsened`/`indeterminate`/`no_data` (direction
+  is only ever looked up per test, never guessed). Also returns trial-level
+  `enrolled`/`active`/`dropouts`/`success_rate` and which test_code
+  `success_rate` was computed against (`primary_test_code_used`, either
+  passed via `?primary_test_code=` or auto-selected by data coverage —
+  never inferred from the trial's free-text primary endpoint). Always
+  computed live. Optional query param: `primary_test_code`.
+- `POST /trials/{nct_id}/compute-metrics` — same computation as `/progress`,
+  additionally upserts the headline (enrolled/active/dropouts/success_rate)
+  into the `trial_metrics` table.
 - `GET /patients` — lists synthetic patients
 - `GET /patients/{id}` — fetches one synthetic patient
 - `POST /parse-criteria` — `{"text": "<raw eligibility text>"}`, uses Gemini

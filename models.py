@@ -153,3 +153,35 @@ class DBCandidateListResponse(BaseModel):
     evaluated_count: int
     returned: int
     candidates: list[DBCandidateSummary]
+
+
+class TestProgress(BaseModel):
+    test_code: str
+    test_name: str
+    unit: Optional[str] = None
+    baseline_value: Optional[float] = None
+    baseline_date: Optional[str] = None
+    baseline_lab_result_id: Optional[int] = None
+    latest_value: Optional[float] = None
+    latest_date: Optional[str] = None
+    latest_lab_result_id: Optional[int] = None
+    deviation: Optional[float] = None
+    status: Literal["improved", "worsened", "indeterminate", "no_data"]
+
+
+class PatientProgress(BaseModel):
+    patient_id: str
+    status: str
+    baseline_date: Optional[str] = None
+    tests: list[TestProgress]
+
+
+class TrialProgressResponse(BaseModel):
+    nct_id: str
+    enrolled: int
+    active: int
+    dropouts: int
+    success_rate: Optional[float] = None
+    primary_test_code_used: Optional[str] = None
+    improved_count: int
+    patients: list[PatientProgress]

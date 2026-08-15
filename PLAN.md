@@ -404,15 +404,92 @@ provider for this.
   wasn't pixel-verified in a real narrow viewport — the browser-automation
   resize didn't propagate to the screenshot tool in this session.
 
-#### 6. `trial_metrics` + progress dashboard — NEXT
-Incrementally updated `enrolled`/`active`/`dropouts`/`success_rate` per
-trial, read by the dashboard instead of aggregating `match_results`/
-`patient_trial` on every page load.
+#### 6. `trial_metrics` + progress dashboard — DONE
+- [x] **Dependency gap found and fixed before building anything**: this
+  step needs enrolled patients with a `baseline_date`, but step 7
+  (the real invite/consent/enroll flow) hasn't been built, so
+  `patient_trial` was completely empty — and Step 3's lab seed gave every
+  patient exactly one reading per test, so there was zero real
+  baseline-vs-latest data anywhere in the dataset either. Confirmed both
+  gaps by direct query before writing code, same discipline as the step 3
+  lab-data gap.
+- [x] `scripts/seed_enrollment.py` — enrolls a 24-patient synthetic cohort
+  into `NCT04280705` (22 enrolled, 2 withdrawn) and inserts a follow-up lab
+  reading 60-150 days after each one's baseline, for real variety: 17
+  tracked on EGFR, 3 on HBA1C, 1 on WBC (no defined direction, for a real
+  `indeterminate`-capable case), 3 enrolled with **no** follow-up (real
+  `no_data` cases), values perturbed with genuine improve/worsen mix (not
+  all one direction). Purely additive, reversible (delete instructions in
+  the script's docstring). **Caught and fixed a real bug in the seed
+  itself**: the first attempt found zero unused HBA1C/WBC patients because
+  Step 3 seeded all 4 new test types per patient in the same loop, so
+  early rows of every test_code belong to the same patients — a `.limit(10)`
+  scan kept re-finding patients already claimed by the EGFR pick and
+  silently added zero HBA1C patients (success_rate for HBA1C came back
+  `0.0` because there was no real data behind it). Fixed by widening the
+  scan window and adding an assertion so this fails loudly instead of
+  silently next time; re-verified before moving on.
+- [x] `progress.py` — `TEST_DIRECTION` lookup (only 8 tests have a defined
+  higher/lower-is-better direction; anything else, including a genuinely
+  ambiguous one like WBC, is `indeterminate`, never guessed).
+  `get_patient_test_progress` computes baseline (nearest reading on/before
+  `baseline_date`) vs. latest (most recent reading) per test_code, with
+  both source `lab_result_id`s. Deliberately treats "baseline and latest
+  are literally the same row" as `no_data` with `latest` fields nulled out
+  — showing a "0 deviation" there would misleadingly imply a real
+  follow-up comparison had been made when none exists yet.
+- [x] `success_rate` is explicitly defined and documented in a code
+  comment, not dressed up as rigorous: the fraction of **all** enrolled
+  patients (denominator never excludes no_data/indeterminate/withdrawn, to
+  avoid inflating the number) whose status on one specific test_code is
+  `improved`. That test_code is never guessed from the trial's free-text
+  `primary_endpoint` (e.g. "Time to Recovery" has no lab-test mapping) —
+  it's either passed explicitly (`?primary_test_code=`) or auto-selected as
+  whichever direction-defined test has the most enrolled-patient coverage,
+  and the response always names which one was actually used
+  (`primary_test_code_used`) so nothing is hidden.
+- [x] `GET /trials/{nct_id}/progress` (live, always recomputed — no
+  staleness) and `POST /trials/{nct_id}/compute-metrics` (same computation,
+  additionally upserts the headline into `trial_metrics`, matching the
+  existing table's columns exactly — no schema change).
+- [x] Frontend: extended `static/researcher.html` (not a separate page)
+  with a "Trial progress" tab, reusing the exact same CSS tokens/mono
+  treatment/verdict-color variables as the candidates view — no second
+  visual style. Headline metrics with success_rate as the one
+  accent-colored, larger figure; an explicit disclaimer sentence
+  ("measures the treatment cohort's trajectory against its own baseline...
+  not a controlled efficacy result... no control arm") always shown, not
+  just documented; per-patient compact `TEST value → value` readouts with
+  colored dots (pass-green/fail-red/muted-grey, reusing the matcher
+  screen's palette); click-through to full per-test detail with both
+  source citations.
+- [x] Tested live in a real browser, per the brief's own test requirement:
+  selected an enrolled patient with 2 real EGFR readings at different
+  dates and confirmed the rendered baseline→latest readout (70.69 →
+  64.20 mL/min/1.73m2, deviation -6.4873), the direction call (`WORSENED`,
+  red), and both source citations (`lab_result #1010` baseline,
+  `lab_result #5027` latest). Confirmed the same patient's other 4 tests
+  (missing a baseline or a follow-up, by design) all render `NO DATA`
+  (grey, dash placeholder) rather than a fabricated deviation — both
+  directions of the no_data case are visually distinguishable from a real
+  improved/worsened call. Full regression across every prior endpoint
+  passed.
+- Known limitation: a transient `Server disconnected` error hit Supabase
+  once during testing while the candidates view's ~450-query match loop
+  was still running and the progress fetch was triggered concurrently —
+  the server itself stayed up and the retry succeeded; this is REST
+  connection-pool contention under concurrent load, not a logic bug, and
+  is the same underlying scale characteristic already flagged in step 5.
 
-#### 7. `patient_trial` enrollment/consent flow — NEXT
-Invitation → accept/decline → consent → enrolled → withdrawn state machine.
-`baseline_date` gets set at enrollment and anchors old-vs-new lab
-comparisons against later `lab_results` rows.
+#### 7. `patient_trial` enrollment/consent flow — PARTIALLY SEEDED
+The real invite → accept/decline → consent → enrolled → withdrawn flow
+(with a UI, not a script) is still not built. Step 6 needed *some*
+enrolled patients to exist to be demoable at all, so
+`scripts/seed_enrollment.py` directly inserts `patient_trial` rows at
+`status='enrolled'`/`'withdrawn'`, skipping the intermediate
+invited/accepted/consented states since nothing produces those yet. A real
+step 7 build should treat this seed data as bootstrap/demo data, not as
+evidence the state machine itself has been exercised end-to-end.
 
 #### 8. Researcher/patient portal — NOT STARTED, large scope
 The full 19-step flow (researcher login, protocol upload, invitations,

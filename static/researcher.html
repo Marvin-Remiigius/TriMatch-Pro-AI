@@ -388,6 +388,209 @@
     color: var(--muted-2);
     font-size: 12.5px;
   }
+
+  /* ---------- Tabs ---------- */
+
+  .tab-row {
+    display: none;
+    gap: 1.25rem;
+    padding: 0 1.5rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .tab-row.visible { display: flex; }
+
+  .tab-btn {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--muted);
+    padding: 0.65rem 0.1rem;
+    cursor: pointer;
+    font-size: 13px;
+    transition: color var(--ease), border-color var(--ease);
+  }
+
+  .tab-btn:hover { color: var(--text); }
+
+  .tab-btn.active {
+    color: var(--text);
+    border-bottom-color: var(--accent);
+  }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* ---------- Progress view ---------- */
+
+  .metrics-row {
+    display: flex;
+    gap: 2.25rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.25rem;
+  }
+
+  .metric {
+    min-width: 90px;
+  }
+
+  .metric-figure {
+    font-family: var(--font-mono);
+    font-size: 22px;
+    font-weight: 500;
+    line-height: 1.1;
+  }
+
+  .metric-figure.headline {
+    font-size: 30px;
+    color: var(--accent);
+  }
+
+  .metric-label {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 0.15rem;
+  }
+
+  .metric-sub {
+    color: var(--muted-2);
+    font-size: 11px;
+    margin-top: 0.2rem;
+    font-family: var(--font-mono);
+    max-width: 34ch;
+  }
+
+  .disclaimer {
+    color: var(--muted-2);
+    font-size: 11.5px;
+    line-height: 1.5;
+    max-width: 60ch;
+    padding: 0.75rem 0 1.25rem;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 1.1rem;
+  }
+
+  .patient-progress-row {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 0.65rem 0.8rem;
+    cursor: pointer;
+    margin-bottom: 0.4rem;
+    transition: border-color var(--ease), background var(--ease);
+  }
+
+  .patient-progress-row:hover { border-color: var(--muted-2); }
+
+  .patient-progress-row.selected {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+  }
+
+  .ppr-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .ppr-id {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+  }
+
+  .status-tag {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted-2);
+  }
+
+  .ppr-tests {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    margin-top: 0.5rem;
+  }
+
+  .test-readout {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+  }
+
+  .dev-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .dev-improved { background: var(--pass); }
+  .dev-worsened { background: var(--fail); }
+  .dev-indeterminate { background: var(--muted); }
+  .dev-no_data { background: var(--muted-2); }
+
+  .readout-value { color: var(--muted); }
+
+  .test-detail {
+    border-top: 1px solid var(--line);
+    padding: 0.9rem 0;
+  }
+
+  .test-detail:first-of-type { border-top: none; }
+
+  .test-detail-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .test-name {
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .dev-pill {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 0.18rem 0.5rem;
+    border-radius: var(--radius);
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .dev-pill.dev-improved { background: var(--pass-dim); color: var(--pass); }
+  .dev-pill.dev-worsened { background: var(--fail-dim); color: var(--fail); }
+  .dev-pill.dev-indeterminate { background: rgba(138, 143, 152, 0.14); color: var(--muted); }
+  .dev-pill.dev-no_data { background: rgba(93, 97, 105, 0.12); color: var(--muted-2); }
+
+  .test-readout-line {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    margin-top: 0.4rem;
+  }
+
+  .test-citations {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1rem;
+    margin-top: 0.4rem;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted-2);
+  }
 </style>
 </head>
 <body>
@@ -401,18 +604,38 @@
   <div class="trial-info" id="trialInfo"></div>
 </header>
 
+<div class="tab-row" id="tabRow">
+  <button class="tab-btn active" id="tabCandidates">Candidates</button>
+  <button class="tab-btn" id="tabProgress">Trial progress</button>
+</div>
+
 <div class="status-line" id="statusLine"></div>
 
-<main class="workspace">
-  <section class="panel candidates-panel">
-    <div id="funnelArea"></div>
-    <div class="candidate-list" id="candidateList"></div>
-  </section>
+<div class="view active" id="viewCandidates">
+  <main class="workspace">
+    <section class="panel candidates-panel">
+      <div id="funnelArea"></div>
+      <div class="candidate-list" id="candidateList"></div>
+    </section>
 
-  <section class="panel detail-panel" id="detailPanel">
-    <div class="detail-empty">Select a candidate to see the full breakdown.</div>
-  </section>
-</main>
+    <section class="panel detail-panel" id="detailPanel">
+      <div class="detail-empty">Select a candidate to see the full breakdown.</div>
+    </section>
+  </main>
+</div>
+
+<div class="view" id="viewProgress">
+  <main class="workspace">
+    <section class="panel candidates-panel">
+      <div id="metricsArea"></div>
+      <div class="candidate-list" id="progressList"></div>
+    </section>
+
+    <section class="panel detail-panel" id="progressDetailPanel">
+      <div class="detail-empty">Select a patient to see their full test breakdown.</div>
+    </section>
+  </main>
+</div>
 
 <script>
   const nctInput = document.getElementById('nctInput');
@@ -422,9 +645,18 @@
   const funnelArea = document.getElementById('funnelArea');
   const candidateList = document.getElementById('candidateList');
   const detailPanel = document.getElementById('detailPanel');
+  const tabRow = document.getElementById('tabRow');
+  const tabCandidates = document.getElementById('tabCandidates');
+  const tabProgress = document.getElementById('tabProgress');
+  const viewCandidates = document.getElementById('viewCandidates');
+  const viewProgress = document.getElementById('viewProgress');
+  const metricsArea = document.getElementById('metricsArea');
+  const progressList = document.getElementById('progressList');
+  const progressDetailPanel = document.getElementById('progressDetailPanel');
 
   let currentNctId = null;
   let selectedPatientId = null;
+  let progressLoadedFor = null;
 
   function esc(str) {
     if (str === null || str === undefined) return '';
@@ -456,7 +688,13 @@
     funnelArea.innerHTML = '';
     candidateList.innerHTML = '';
     detailPanel.innerHTML = '<div class="detail-empty">Select a candidate to see the full breakdown.</div>';
+    metricsArea.innerHTML = '';
+    progressList.innerHTML = '';
+    progressDetailPanel.innerHTML = '<div class="detail-empty">Select a patient to see their full test breakdown.</div>';
     selectedPatientId = null;
+    progressLoadedFor = null;
+    tabRow.classList.remove('visible');
+    switchTab('candidates');
     setStatus('Loading trial…');
 
     try {
@@ -474,6 +712,7 @@
         <span class="title">${esc(data.title || data.nct_id)}</span>
         <span class="meta">${esc(data.nct_id)}${phase ? ' · ' + esc(phase) : ''}${data.overall_status ? ' · ' + esc(data.overall_status) : ''}</span>
       `;
+      tabRow.classList.add('visible');
 
       await loadCandidates(currentNctId);
     } catch (err) {
@@ -481,6 +720,13 @@
     } finally {
       loadBtn.disabled = false;
     }
+  }
+
+  function switchTab(tab) {
+    tabCandidates.classList.toggle('active', tab === 'candidates');
+    tabProgress.classList.toggle('active', tab === 'progress');
+    viewCandidates.classList.toggle('active', tab === 'candidates');
+    viewProgress.classList.toggle('active', tab === 'progress');
   }
 
   async function loadCandidates(nctId) {
@@ -578,6 +824,144 @@
       detailPanel.innerHTML = '<div class="detail-empty">Could not reach the server. Try again.</div>';
     }
   }
+
+  function devClass(status) {
+    return 'dev-' + status;
+  }
+
+  function fmtValue(v) {
+    if (v === null || v === undefined) return '—';
+    return typeof v === 'number' ? (Number.isInteger(v) ? v : v.toFixed(2)) : v;
+  }
+
+  function fmtDate(d) {
+    if (!d) return null;
+    return d.slice(0, 10);
+  }
+
+  async function loadProgress(nctId) {
+    metricsArea.innerHTML = '<div class="skeleton">Computing baseline-vs-latest progress…</div>';
+    progressList.innerHTML = '';
+
+    try {
+      const res = await fetch(`/trials/${encodeURIComponent(nctId)}/progress`);
+      const data = await res.json();
+      if (!res.ok) {
+        metricsArea.innerHTML = `<div class="detail-empty">${esc(data.detail || 'Could not load progress for this trial.')}</div>`;
+        return;
+      }
+
+      progressLoadedFor = nctId;
+      window.__progressData = data;
+
+      const successPct = data.success_rate !== null && data.success_rate !== undefined
+        ? Math.round(data.success_rate * 100) + '%'
+        : '—';
+
+      metricsArea.innerHTML = `
+        <div class="metrics-row">
+          <div class="metric">
+            <div class="metric-figure headline">${successPct}</div>
+            <div class="metric-label">success rate</div>
+            <div class="metric-sub">${data.primary_test_code_used ? `share of enrolled patients improved on ${esc(data.primary_test_code_used)}` : 'no direction-defined test with enough data yet'}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-figure">${data.enrolled}</div>
+            <div class="metric-label">enrolled</div>
+          </div>
+          <div class="metric">
+            <div class="metric-figure">${data.active}</div>
+            <div class="metric-label">active</div>
+          </div>
+          <div class="metric">
+            <div class="metric-figure">${data.dropouts}</div>
+            <div class="metric-label">dropouts</div>
+          </div>
+        </div>
+        <div class="disclaimer">
+          This measures the treatment cohort's trajectory against its own baseline on
+          ${data.primary_test_code_used ? esc(data.primary_test_code_used) : 'a tracked test'} — not a controlled
+          efficacy result. There is no control arm here.
+        </div>
+      `;
+
+      if (data.patients.length === 0) {
+        progressList.innerHTML = '<div class="detail-empty">No patients enrolled in this trial yet.</div>';
+        return;
+      }
+
+      progressList.innerHTML = data.patients.map(p => {
+        const rows = p.tests.map(t => `
+          <div class="test-readout">
+            <span class="dev-dot ${devClass(t.status)}"></span>
+            <span>${esc(t.test_code)}</span>
+            <span class="readout-value">${fmtValue(t.baseline_value)} → ${fmtValue(t.latest_value)}</span>
+          </div>
+        `).join('');
+        return `
+          <button class="patient-progress-row" data-pid="${esc(p.patient_id)}">
+            <div class="ppr-top">
+              <span class="ppr-id mono">${esc(shortId(p.patient_id))}</span>
+              <span class="status-tag">${esc(p.status)}</span>
+            </div>
+            <div class="ppr-tests">${rows}</div>
+          </button>
+        `;
+      }).join('');
+
+      progressList.querySelectorAll('.patient-progress-row').forEach(btn => {
+        btn.addEventListener('click', () => selectProgressPatient(btn.dataset.pid));
+      });
+    } catch (err) {
+      metricsArea.innerHTML = '<div class="detail-empty">Could not reach the server. Try again.</div>';
+    }
+  }
+
+  function selectProgressPatient(patientId) {
+    progressList.querySelectorAll('.patient-progress-row').forEach(btn => {
+      btn.classList.toggle('selected', btn.dataset.pid === patientId);
+    });
+
+    const data = window.__progressData;
+    const patient = data && data.patients.find(p => p.patient_id === patientId);
+    if (!patient) {
+      progressDetailPanel.innerHTML = '<div class="detail-empty">Could not find this patient.</div>';
+      return;
+    }
+
+    const renderTest = (t) => `
+      <div class="test-detail">
+        <div class="test-detail-top">
+          <span class="test-name">${esc(t.test_name)} <span class="mono" style="color: var(--muted); font-weight: 400;">(${esc(t.test_code)})</span></span>
+          <span class="dev-pill ${devClass(t.status)}"><span class="dev-dot ${devClass(t.status)}"></span>${esc(t.status.replace('_', ' '))}</span>
+        </div>
+        <div class="test-readout-line">
+          ${fmtValue(t.baseline_value)}${t.unit ? ' ' + esc(t.unit) : ''} → ${fmtValue(t.latest_value)}${t.unit ? ' ' + esc(t.unit) : ''}
+          ${t.deviation !== null && t.deviation !== undefined ? `<span style="color: var(--muted);"> (${t.deviation > 0 ? '+' : ''}${t.deviation})</span>` : ''}
+        </div>
+        <div class="test-citations">
+          <span>baseline ${fmtDate(t.baseline_date) || '—'}${t.baseline_lab_result_id ? ` · lab_result #${t.baseline_lab_result_id}` : ''}</span>
+          <span>latest ${fmtDate(t.latest_date) || '—'}${t.latest_lab_result_id ? ` · lab_result #${t.latest_lab_result_id}` : ''}</span>
+        </div>
+      </div>
+    `;
+
+    progressDetailPanel.innerHTML = `
+      <div class="detail-header">
+        <span class="id">${esc(shortId(patientId))}</span>
+        <span class="demo">${esc(patient.status)} · baseline ${fmtDate(patient.baseline_date) || '—'}</span>
+      </div>
+      ${patient.tests.map(renderTest).join('')}
+    `;
+  }
+
+  tabCandidates.addEventListener('click', () => switchTab('candidates'));
+  tabProgress.addEventListener('click', () => {
+    switchTab('progress');
+    if (currentNctId && progressLoadedFor !== currentNctId) {
+      loadProgress(currentNctId);
+    }
+  });
 
   loadBtn.addEventListener('click', loadTrial);
   nctInput.addEventListener('keydown', (e) => {

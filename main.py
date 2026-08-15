@@ -24,8 +24,10 @@ from models import (
     ParseCriteriaToDBResponse,
     Patient,
     TrialCriterionRow,
+    TrialProgressResponse,
 )
 from patients import get_patient, load_patients
+from progress import compute_trial_progress, store_trial_metrics
 from trials import fetch_trial, to_trial_row
 
 load_dotenv()
@@ -185,6 +187,21 @@ def get_db_candidates(nct_id: str, limit: int = 50, max_evaluate: int = _MAX_EVA
         returned=min(limit, len(candidates)),
         candidates=candidates[:limit],
     )
+
+
+@app.get("/trials/{nct_id}/progress", response_model=TrialProgressResponse)
+def get_trial_progress(nct_id: str, primary_test_code: str | None = None):
+    client = get_client()
+    progress = compute_trial_progress(client, nct_id, primary_test_code=primary_test_code)
+    return TrialProgressResponse(**progress)
+
+
+@app.post("/trials/{nct_id}/compute-metrics", response_model=TrialProgressResponse)
+def compute_metrics(nct_id: str, primary_test_code: str | None = None):
+    client = get_client()
+    progress = compute_trial_progress(client, nct_id, primary_test_code=primary_test_code)
+    store_trial_metrics(client, progress)
+    return TrialProgressResponse(**progress)
 
 
 @app.get("/patients", response_model=list[Patient])
