@@ -16,9 +16,22 @@ and "Exclusion Criteria:"), extract each individual criterion as a
 structured rule.
 
 For each criterion, try to express it as a machine-checkable rule with:
-- field: a dotted path into patient data, e.g. "age", "sex",
-  "diagnosis.icd10", "lab.hba1c", "lab.egfr", "vitals.spo2",
-  "medication" (use snake_case lab names, no spaces).
+- field: MUST be one of exactly these field paths -- never invent a new
+  one, even if it seems natural:
+    "age", "sex" (patient scalars)
+    "diagnosis.icd10" (list of ICD-10 codes the patient has)
+    "diagnosis.label" (list of diagnosis text labels the patient has --
+      use this with "contains"/"not_contains" for a condition described
+      by name rather than a known ICD-10 code, e.g. checking for "Type 1
+      diabetes" or "pregnancy" by label text)
+    "medication" (list of medication names the patient is on)
+    "lab.<name>" (a lab value, e.g. "lab.hba1c", "lab.egfr", "lab.alt" --
+      snake_case, no spaces)
+    "vitals.<name>" (a vital sign, e.g. "vitals.spo2", "vitals.systolic_bp",
+      "vitals.heart_rate", "vitals.temperature_c")
+  If a criterion doesn't map cleanly onto one of these (e.g. it needs a
+  concept like "diagnosis type" or "trial history" that isn't in this
+  list), do not invent a field -- mark it needs_review instead.
 - operator: one of ">", ">=", "<", "<=", "==", "!=", "in", "not_in",
   "contains", "not_contains".
 - value: the comparison value (number, string, or boolean).

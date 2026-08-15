@@ -2,3 +2,6 @@ venv/
 __pycache__/
 *.pyc
 .env
+uvicorn.pid
+uvicorn_out.log
+uvicorn_err.log
