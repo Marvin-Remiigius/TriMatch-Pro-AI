@@ -57,10 +57,14 @@ requirements, and what's built so far vs. still open.
   live against the real Supabase data (1000 patients). Enter an NCT id and
   click "Load trial"; click a ranked candidate to see its full per-criterion
   breakdown, including the source `lab_result` citation behind every
-  lab-based verdict. Trials without a clean age/diagnosis criterion (like
-  `NCT04280705`) fall back to matching the full patient pool and can take
-  up to ~30-60s to load — this is a known scale limitation, not a bug (see
-  `PLAN.md` step 5). The **Trial progress** tab shows enrolled/active/
+  lab-based verdict. The Candidates and Enrollment tabs cap matching at 30
+  patients per load (`limit=30&max_evaluate=30` in the dashboard's fetch
+  calls) so any trial loads in ~15-20s regardless of how well the coarse
+  filter narrows it — raise this in `static/researcher.html` if you want a
+  fuller sweep at the cost of a slower load (see `PLAN.md` step 5 for why
+  the coarse filter alone doesn't bound load time).
+
+  The **Trial progress** tab shows enrolled/active/
   dropout counts, a transparently-defined `success_rate`, and a
   baseline-vs-latest lab readout per enrolled patient with source
   citations — currently only populated for `NCT04280705` (see

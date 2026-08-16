@@ -365,6 +365,16 @@ provider for this.
   (default 200). The filter only helps trials whose clean criteria happen
   to include age/diagnosis; broader coverage (labs, other operators) is a
   possible future enhancement, not built now.
+- Follow-up finding while hunting for a "fast-loading" real trial to
+  recommend: the dashboard's `max_evaluate=150` was hardcoded regardless
+  of `coarse_filtered_count`, so a trial that coarse-filtered to 353
+  patients (`NCT04212468`, clean `age >= 65`) actually took *longer*
+  (97s) than the unfiltered `NCT04280705` (30-40s) — Supabase network
+  variance dominated, not the filter. The filter's speed benefit only
+  materializes once `max_evaluate` is raised past the filtered count;
+  capped low, wall-clock time is roughly constant across trials. Lowered
+  the dashboard's default to `limit=30&max_evaluate=30` (verified: ~16s),
+  trading a smaller per-load sample for predictable speed.
 
 #### 5a. Researcher dashboard (single screen) — DONE
 - [x] `static/researcher.html` — a single, dependency-free HTML/CSS/JS page

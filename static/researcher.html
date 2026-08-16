@@ -861,7 +861,7 @@
     funnelArea.innerHTML = '';
 
     try {
-      const res = await fetch(`/trials/${encodeURIComponent(nctId)}/db-candidates?limit=50&max_evaluate=150`);
+      const res = await fetch(`/trials/${encodeURIComponent(nctId)}/db-candidates?limit=30&max_evaluate=30`);
       const data = await res.json();
       if (!res.ok) {
         setError(data.detail || 'No parsed criteria for this trial yet.');
@@ -1115,7 +1115,7 @@
       if (haveCache) {
         candidates = cachedCandidates;
       } else {
-        const candRes = await fetch(`/trials/${encodeURIComponent(nctId)}/db-candidates?limit=50&max_evaluate=150`);
+        const candRes = await fetch(`/trials/${encodeURIComponent(nctId)}/db-candidates?limit=30&max_evaluate=30`);
         const candData = await candRes.json();
         if (!candRes.ok) {
           enrollmentSummary.innerHTML = `<div class="detail-empty">${esc(candData.detail || 'No parsed criteria for this trial yet.')}</div>`;
