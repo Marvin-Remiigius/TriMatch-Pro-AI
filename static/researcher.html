@@ -92,7 +92,7 @@
     display: flex;
     gap: 0.5rem;
     flex: 1 1 320px;
-    max-width: 460px;
+    max-width: 560px;
   }
 
   #nctInput {
@@ -107,6 +107,21 @@
   #nctInput::placeholder { color: var(--muted-2); }
 
   #nctInput:focus-visible { border-color: var(--accent); }
+
+  #patientCountInput {
+    width: 5.5rem;
+    flex: 0 0 auto;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 0.5rem 0.6rem;
+    color: var(--text);
+    font-family: var(--font-mono);
+  }
+
+  #patientCountInput::placeholder { color: var(--muted-2); }
+
+  #patientCountInput:focus-visible { border-color: var(--accent); }
 
   #loadBtn {
     background: transparent;
@@ -695,6 +710,7 @@
   <div class="brand">TriMatch <span class="dim">Researcher</span></div>
   <div class="load-row">
     <input type="text" id="nctInput" placeholder="NCT ID, e.g. NCT04280705" />
+    <input type="number" id="patientCountInput" placeholder="Patients" value="30" min="1" max="1000" title="Number of patients to evaluate" />
     <button id="loadBtn">Load trial</button>
   </div>
   <div class="trial-info" id="trialInfo"></div>
@@ -749,6 +765,7 @@
 
 <script>
   const nctInput = document.getElementById('nctInput');
+  const patientCountInput = document.getElementById('patientCountInput');
   const loadBtn = document.getElementById('loadBtn');
   const trialInfo = document.getElementById('trialInfo');
   const statusLine = document.getElementById('statusLine');
@@ -770,6 +787,7 @@
   const auditPanel = document.getElementById('auditPanel');
 
   let currentNctId = null;
+  let currentPatientCount = 30;
   let selectedPatientId = null;
   let progressLoadedFor = null;
   let enrollmentLoadedFor = null;
@@ -800,6 +818,10 @@
   async function loadTrial() {
     const nctId = nctInput.value.trim();
     if (!nctId) return;
+
+    const rawCount = parseInt(patientCountInput.value, 10);
+    currentPatientCount = Number.isFinite(rawCount) ? Math.min(1000, Math.max(1, rawCount)) : 30;
+    patientCountInput.value = currentPatientCount;
 
     loadBtn.disabled = true;
     trialInfo.innerHTML = '';
@@ -861,7 +883,7 @@
     funnelArea.innerHTML = '';
 
     try {
-      const res = await fetch(`/trials/${encodeURIComponent(nctId)}/db-candidates?limit=30&max_evaluate=30`);
+      const res = await fetch(`/trials/${encodeURIComponent(nctId)}/db-candidates?limit=${currentPatientCount}&max_evaluate=${currentPatientCount}`);
       const data = await res.json();
       if (!res.ok) {
         setError(data.detail || 'No parsed criteria for this trial yet.');
@@ -1115,7 +1137,7 @@
       if (haveCache) {
         candidates = cachedCandidates;
       } else {
-        const candRes = await fetch(`/trials/${encodeURIComponent(nctId)}/db-candidates?limit=30&max_evaluate=30`);
+        const candRes = await fetch(`/trials/${encodeURIComponent(nctId)}/db-candidates?limit=${currentPatientCount}&max_evaluate=${currentPatientCount}`);
         const candData = await candRes.json();
         if (!candRes.ok) {
           enrollmentSummary.innerHTML = `<div class="detail-empty">${esc(candData.detail || 'No parsed criteria for this trial yet.')}</div>`;
