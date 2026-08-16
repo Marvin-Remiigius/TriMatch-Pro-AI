@@ -829,6 +829,53 @@ regression coverage.
   response but isn't persisted to the DB -- same pre-existing gap noted
   under the compound-criteria step.
 
+## Patient-side consent screen: steps, withdraw, own progress (2026-08-16) — DONE
+
+User feedback: the patient-facing `consent.html` was "very simple and not
+intuitive" compared to the researcher dashboard. Pure front-end change,
+built entirely on existing backend endpoints -- no new routes, no schema
+changes.
+
+- **Step indicator**: a visual Invited -> Consented -> Enrolled stepper at
+  the top of every state (Declined/Withdrawn show a status pill instead),
+  so patients can see where they are in the process instead of a single
+  flat status line.
+- **Real withdraw action -- was a genuine gap, not just polish**: the
+  consent terms text has always promised "you may withdraw... at any time
+  afterward without giving a reason," but no patient-facing control ever
+  existed to do it -- `/trials/{nct}/patients/{pid}/withdraw` was wired up
+  for the researcher dashboard only. Added a withdraw link (consented and
+  enrolled states) with an inline, non-native confirm step (styled to
+  match the page, not a browser `confirm()` dialog) before calling the
+  existing endpoint. Verified live: confirm/cancel both work, a real
+  withdraw persists and survives reload, and the audit log records it
+  correctly (`patient.withdrawn`, from_status `consented`).
+- **Enrolled patients now see their own progress**: reuses the existing
+  `/trials/{nct}/progress` endpoint (already built for the researcher
+  dashboard), filtered client-side to the signed-in patient's own
+  `patient_id` -- baseline date plus a per-test baseline-vs-latest row
+  with an honest trend label (Improved / Worsened / No clear trend / No
+  follow-up data yet). Verified live against a real enrolled patient: real
+  baseline/latest values, a genuine "Worsened" eGFR trend rendered
+  correctly.
+- **Richer initial invitation**: shows the trial's `primary_endpoint`
+  ("This trial is studying: ...") when available, so patients see what
+  the trial is actually for before deciding, not just its NCT ID and
+  phase.
+- **Known, un-fixed limitation**: `withdraw_patient()` in `enrollment.py`
+  hardcodes `actor="researcher"` in its audit row regardless of caller,
+  since one endpoint now serves both the researcher dashboard and this
+  patient screen. A patient-initiated withdrawal is logged with the wrong
+  actor. Not fixed here -- correctly attributing it would mean either
+  trusting a client-supplied actor value (a spoofing concern worth
+  discussing, not deciding unilaterally) or splitting into a separate
+  patient-facing endpoint; left as a known gap rather than a quick patch.
+- Verified live in a real browser across every state: invited (with the
+  new primary_endpoint line), consented, enrolled (with real progress
+  data), declined, withdrawn (both the fresh transition and reload-then-
+  already-withdrawn), and no-invitation/error paths -- all render
+  correctly with zero backend changes required.
+
 ## Demo narrative (what to show judges)
 1. Paste a real trial's messy eligibility text → watch it become clean rules.
 2. Show a ranked list of patients for that trial.

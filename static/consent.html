@@ -181,6 +181,152 @@
   }
 
   .skeleton { color: var(--muted-2); font-size: 13px; }
+
+  .steps {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1.75rem;
+  }
+
+  .step {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--muted-2);
+  }
+
+  .step .dot {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-family: var(--font-mono);
+    flex-shrink: 0;
+  }
+
+  .step .label {
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .step.done .dot { background: var(--pass-dim); border-color: transparent; color: var(--pass); }
+  .step.done .label { color: var(--text); }
+  .step.active .dot { border-color: var(--accent); color: var(--accent); }
+  .step.active .label { color: var(--text); font-weight: 600; }
+
+  .step-line {
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+    margin: 0 0.5rem;
+    min-width: 1rem;
+  }
+  .step-line.done { background: var(--pass); opacity: 0.4; }
+
+  .badge-row {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1.75rem;
+  }
+
+  .status-pill {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    background: var(--fail-dim);
+    color: var(--fail);
+  }
+
+  .progress-list {
+    margin: 1rem 0 1.5rem;
+    border-top: 1px solid var(--line);
+  }
+
+  .progress-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.7rem 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .progress-row .name { font-size: 13px; }
+
+  .progress-row .values {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--muted);
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .trend-badge {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  .trend-improved { background: var(--pass-dim); color: var(--pass); }
+  .trend-worsened { background: var(--fail-dim); color: var(--fail); }
+  .trend-indeterminate, .trend-no_data { background: var(--unknown-dim); color: var(--unknown); }
+
+  .baseline-note {
+    color: var(--muted);
+    font-size: 12.5px;
+    margin-bottom: 0.25rem;
+  }
+
+  .withdraw-row {
+    margin-top: 1.25rem;
+    padding-top: 1.1rem;
+    border-top: 1px solid var(--line);
+  }
+
+  .withdraw-link {
+    background: none;
+    border: none;
+    color: var(--muted-2);
+    font-size: 12px;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .withdraw-link:hover { color: var(--fail); }
+
+  .confirm-box {
+    background: var(--fail-dim);
+    border: 1px solid rgba(192, 106, 95, 0.35);
+    border-radius: var(--radius);
+    padding: 0.9rem 1rem;
+    margin-top: 0.75rem;
+  }
+
+  .confirm-box p { margin: 0 0 0.75rem; font-size: 12.5px; color: var(--text); }
+
+  .confirm-actions { display: flex; gap: 0.6rem; }
+
+  .btn-sm {
+    padding: 0.4rem 0.8rem;
+    font-size: 12px;
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .btn-sm.danger { background: var(--fail); border-color: transparent; color: #1a1110; }
+  .btn-sm:disabled { opacity: 0.5; cursor: default; }
 </style>
 </head>
 <body>
@@ -210,15 +356,167 @@
     content.innerHTML = `<div class="status-box"><div class="headline">Something's not right</div><div class="body">${esc(message)}</div></div>`;
   }
 
+  const STEP_ORDER = ['invited', 'consented', 'enrolled'];
+  // 'accepted' is a brief transitional state inside the consent transaction
+  // (patient.accepted -> consent.recorded) -- treat it the same as
+  // "consent in progress", one step past invited.
+  function stepIndex(status) {
+    if (status === 'accepted') return 1;
+    const i = STEP_ORDER.indexOf(status);
+    return i === -1 ? 0 : i;
+  }
+
+  function renderSteps(status) {
+    if (status === 'declined' || status === 'withdrawn') {
+      return `<div class="badge-row"><span class="status-pill">${esc(status)}</span></div>`;
+    }
+    const labels = ['Invited', 'Consented', 'Enrolled'];
+    const current = stepIndex(status);
+    let html = '<div class="steps">';
+    labels.forEach((label, i) => {
+      const done = i < current || (i === current && status === 'enrolled');
+      const active = i === current && status !== 'enrolled';
+      const cls = done ? 'done' : active ? 'active' : '';
+      const mark = done ? '✓' : String(i + 1);
+      html += `<div class="step ${cls}"><span class="dot">${mark}</span><span class="label">${label}</span></div>`;
+      if (i < labels.length - 1) {
+        html += `<div class="step-line ${i < current ? 'done' : ''}"></div>`;
+      }
+    });
+    html += '</div>';
+    return html;
+  }
+
+  function trendLabel(status) {
+    return { improved: 'Improved', worsened: 'Worsened', indeterminate: 'No clear trend', no_data: 'No follow-up data yet' }[status] || status;
+  }
+
+  function renderWithdrawSection() {
+    return `
+      <div class="withdraw-row" id="withdrawRow">
+        <button class="withdraw-link" id="withdrawLink">Withdraw from this trial</button>
+      </div>
+    `;
+  }
+
+  function attachWithdrawHandler(onWithdrawn) {
+    const link = document.getElementById('withdrawLink');
+    if (!link) return;
+    link.addEventListener('click', () => {
+      const row = document.getElementById('withdrawRow');
+      row.innerHTML = `
+        <div class="confirm-box">
+          <p>Withdrawing stops your participation in this trial. This can't be undone, but it won't affect any other care you receive. Are you sure?</p>
+          <div class="confirm-actions">
+            <button class="btn-sm danger" id="confirmWithdraw">Yes, withdraw</button>
+            <button class="btn-sm" id="cancelWithdraw">Cancel</button>
+          </div>
+        </div>
+      `;
+      document.getElementById('cancelWithdraw').addEventListener('click', () => {
+        row.innerHTML = `<button class="withdraw-link" id="withdrawLink">Withdraw from this trial</button>`;
+        attachWithdrawHandler(onWithdrawn);
+      });
+      document.getElementById('confirmWithdraw').addEventListener('click', async (e) => {
+        e.target.disabled = true;
+        document.getElementById('cancelWithdraw').disabled = true;
+        try {
+          const res = await fetch(`/trials/${encodeURIComponent(nctId)}/patients/${encodeURIComponent(patientId)}/withdraw`, { method: 'POST' });
+          const data = await res.json();
+          if (!res.ok) {
+            renderError(data.detail || 'Could not process your withdrawal. Try again.');
+            return;
+          }
+          onWithdrawn();
+        } catch (err) {
+          renderError('Could not reach the server. Try again.');
+        }
+      });
+    });
+  }
+
+  function renderWithdrawnConfirmation() {
+    content.innerHTML = `
+      ${renderSteps('withdrawn')}
+      <div class="status-box declined">
+        <div class="headline">You've withdrawn from this trial</div>
+        <div class="body">Thank you for your participation. No further data will be collected for this trial.</div>
+      </div>
+    `;
+  }
+
+  async function renderEnrolledView() {
+    content.innerHTML = `${renderSteps('enrolled')}<div class="skeleton">Loading your progress…</div>`;
+    try {
+      const res = await fetch(`/trials/${encodeURIComponent(nctId)}/progress`);
+      const data = await res.json();
+      const mine = res.ok ? (data.patients || []).find(p => p.patient_id === patientId) : null;
+
+      let progressHtml = '';
+      if (mine && mine.tests && mine.tests.length) {
+        progressHtml = `
+          <div class="baseline-note">Baseline set ${mine.baseline_date ? esc(mine.baseline_date.slice(0, 10)) : '—'}. Compared against your most recent results:</div>
+          <div class="progress-list">
+            ${mine.tests.map(t => `
+              <div class="progress-row">
+                <div class="name">${esc(t.test_name || t.test_code)}</div>
+                <div class="values">
+                  ${t.baseline_value != null ? esc(t.baseline_value) : '—'} → ${t.latest_value != null ? esc(t.latest_value) : '—'}${t.unit ? ' ' + esc(t.unit) : ''}
+                  <div class="trend-badge trend-${esc(t.status)}">${esc(trendLabel(t.status))}</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      } else {
+        progressHtml = `<div class="terms"><p>No follow-up lab results have been recorded since enrollment yet. Check back after your next visit.</p></div>`;
+      }
+
+      content.innerHTML = `
+        ${renderSteps('enrolled')}
+        <div class="status-box success">
+          <div class="headline">You're enrolled — thank you for participating</div>
+          <div class="body">Your care team will keep tracking your results as part of this trial.</div>
+        </div>
+        ${progressHtml}
+        ${renderWithdrawSection()}
+      `;
+      attachWithdrawHandler(renderWithdrawnConfirmation);
+    } catch (err) {
+      content.innerHTML = `
+        ${renderSteps('enrolled')}
+        <div class="status-box success">
+          <div class="headline">You're enrolled — thank you for participating</div>
+          <div class="body">Your progress data couldn't be loaded right now.</div>
+        </div>
+        ${renderWithdrawSection()}
+      `;
+      attachWithdrawHandler(renderWithdrawnConfirmation);
+    }
+  }
+
+  function renderConsentedView() {
+    content.innerHTML = `
+      ${renderSteps('consented')}
+      <div class="status-box success">
+        <div class="headline">Your consent is recorded</div>
+        <div class="body">A member of the research team will review your case and confirm enrollment. You'll see your baseline and progress here once that happens.</div>
+      </div>
+      ${renderWithdrawSection()}
+    `;
+    attachWithdrawHandler(renderWithdrawnConfirmation);
+  }
+
   function renderAlreadyResponded(status) {
+    if (status === 'enrolled') { renderEnrolledView(); return; }
+    if (status === 'consented' || status === 'accepted') { renderConsentedView(); return; }
+    if (status === 'withdrawn') { renderWithdrawnConfirmation(); return; }
+
     const labels = {
-      accepted: "You've already started responding to this invitation.",
-      consented: "You've already consented to this trial. A member of the research team will follow up about enrollment.",
-      enrolled: "You're enrolled in this trial. Thank you for participating.",
       declined: "You've already declined this invitation.",
-      withdrawn: "You've withdrawn from this trial.",
     };
     content.innerHTML = `
+      ${renderSteps(status)}
       <div class="status-box">
         <div class="headline">Already responded</div>
         <div class="body">${esc(labels[status] || `Current status: ${status}`)}</div>
@@ -238,6 +536,7 @@
   function renderConsentForm(trial) {
     const phase = Array.isArray(trial.phase) ? trial.phase.join(', ') : trial.phase;
     content.innerHTML = `
+      ${renderSteps('invited')}
       <div class="trial-box">
         <div class="title">${esc(trial.title || trial.nct_id)}</div>
         <div class="meta">${esc(trial.nct_id)}${phase ? ' · ' + esc(phase) : ''}${trial.overall_status ? ' · ' + esc(trial.overall_status) : ''}</div>
@@ -248,6 +547,7 @@
       <div class="mono">${esc(shortId(patientId))}</div>
 
       <div class="terms">
+        ${trial.primary_endpoint ? `<p>This trial is studying: <strong>${esc(trial.primary_endpoint)}</strong>.</p>` : ''}
         <p>You've been invited to take part in the trial above. Before you decide, please read the following:</p>
         <p>Participation is voluntary. You may decline this invitation, and if you accept now, you may withdraw
         from the trial at any time afterward without giving a reason.</p>
@@ -281,14 +581,10 @@
       }
 
       if (action === 'consent') {
-        content.innerHTML = `
-          <div class="status-box success">
-            <div class="headline">Thank you — your consent has been recorded</div>
-            <div class="body">A member of the research team will follow up to confirm your enrollment.</div>
-          </div>
-        `;
+        renderConsentedView();
       } else {
         content.innerHTML = `
+          ${renderSteps('declined')}
           <div class="status-box declined">
             <div class="headline">You've declined this invitation</div>
             <div class="body">Thank you for considering. No further action is needed.</div>
