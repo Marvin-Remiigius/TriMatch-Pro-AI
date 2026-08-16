@@ -65,7 +65,12 @@ requirements, and what's built so far vs. still open.
   baseline-vs-latest lab readout per enrolled patient with source
   citations — currently only populated for `NCT04280705` (see
   `scripts/seed_enrollment.py`; run it against another trial's NCT id to
-  demo progress there too).
+  demo progress there too). The **Enrollment** tab is the real invite ->
+  consent -> enroll pipeline: each ranked candidate shows its current
+  status and the one next action available, plus the trial's audit trail
+  rendered live on the same screen. "Invite" opens
+  `/consent.html?patient=...&trial=...` in a new tab — the one
+  patient-facing screen (Accept/Decline; no login, no portal).
 
 ## Endpoints
 
@@ -102,6 +107,23 @@ requirements, and what's built so far vs. still open.
 - `POST /trials/{nct_id}/compute-metrics` — same computation as `/progress`,
   additionally upserts the headline (enrolled/active/dropouts/success_rate)
   into the `trial_metrics` table.
+- `POST /trials/{nct_id}/patients/{patient_id}/invite` — creates a
+  `patient_trial` row at `status='invited'`. 409s if one already exists.
+- `POST /trials/{nct_id}/patients/{patient_id}/consent` — only from
+  `invited`; records terms-shown-then-accepted-then-consented as two
+  audit-logged transitions, ending at `status='consented'`. 409s otherwise.
+- `POST /trials/{nct_id}/patients/{patient_id}/enroll` — only from
+  `consented`; sets `status='enrolled'`, `enrolled_at`, and
+  `baseline_date` together (the anchor `/progress` depends on). 409s
+  otherwise.
+- `POST /trials/{nct_id}/patients/{patient_id}/withdraw` — from any active
+  state (`invited`/`accepted`/`consented`/`enrolled`) to `withdrawn`.
+- `POST /trials/{nct_id}/patients/{patient_id}/decline` — from
+  `invited`/`accepted` to `declined`.
+- `GET /trials/{nct_id}/enrollment` — every `patient_trial` row for the
+  trial (current status + timestamps).
+- `GET /trials/{nct_id}/audit` — the `audit_log` rows for the trial
+  (actor/action/entity_id/detail), newest first. Optional `limit`.
 - `GET /patients` — lists synthetic patients
 - `GET /patients/{id}` — fetches one synthetic patient
 - `POST /parse-criteria` — `{"text": "<raw eligibility text>"}`, uses Gemini

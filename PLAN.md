@@ -481,15 +481,80 @@ provider for this.
   connection-pool contention under concurrent load, not a logic bug, and
   is the same underlying scale characteristic already flagged in step 5.
 
-#### 7. `patient_trial` enrollment/consent flow — PARTIALLY SEEDED
-The real invite → accept/decline → consent → enrolled → withdrawn flow
-(with a UI, not a script) is still not built. Step 6 needed *some*
-enrolled patients to exist to be demoable at all, so
-`scripts/seed_enrollment.py` directly inserts `patient_trial` rows at
-`status='enrolled'`/`'withdrawn'`, skipping the intermediate
-invited/accepted/consented states since nothing produces those yet. A real
-step 7 build should treat this seed data as bootstrap/demo data, not as
-evidence the state machine itself has been exercised end-to-end.
+#### 7. `patient_trial` enrollment/consent flow — DONE
+- [x] `enrollment.py` — the real state machine, superseding step 6's
+  bootstrap seed script for anything going forward: `invite` (creates the
+  `patient_trial` row, rejects if one already exists), `consent` (only
+  from `invited`; internally two audit-logged transitions,
+  invited→accepted→consented, so terms are provably shown while status
+  was still `invited` before consent is recorded), `enroll` (only from
+  `consented`; sets `enrolled_at` **and `baseline_date`** together — this
+  is exactly the anchor step 6 was manually seeding, so real enrollments
+  now feed real progress tracking with no gap), `withdraw` (from any
+  active state), `decline` (from `invited`/`accepted`). Illegal jumps
+  raise `InvalidTransitionError` → HTTP 409 with a clear message naming
+  the actual current status, not a silent allow.
+- [x] Every transition appends one immutable row to `audit_log`
+  (actor/action/entity/entity_id/detail as jsonb with
+  from_status/to_status/timestamp) — plain inserts only, never an update
+  or delete. `consent` writes two rows (`patient.accepted` then
+  `consent.recorded`) so the audit trail shows the actual two-step
+  transition, not a collapsed one. Researcher-triggered actions
+  (invite/enroll/withdraw) are logged with `actor='researcher'`;
+  patient-triggered ones (accept/consent/decline) with `actor='patient'`
+  — a real, honest distinction, not decorative.
+- [x] Five transition endpoints
+  (`POST /trials/{nct_id}/patients/{patient_id}/{invite,consent,enroll,
+  withdraw,decline}`), `GET /trials/{nct_id}/enrollment` (current status
+  per patient), and `GET /trials/{nct_id}/audit` (the compliance artifact,
+  actually queryable, not just claimed).
+- [x] `static/consent.html` — the one patient-facing screen, matching the
+  dashboard's exact tokens. Reads `?patient=&trial=`, shows trial summary
+  + terms + Accept/Decline, handles every state honestly (no invitation
+  found; already responded, with the specific status; success; declined),
+  and is safe to reload (re-shows "already responded" rather than
+  double-submitting). Explicitly labeled "a prototype consent screen for
+  demonstration — not a legally binding consent form."
+- [x] Extended `static/researcher.html` with an **Enrollment** tab: the
+  ranked candidate list (reusing `/db-candidates`) overlaid with each
+  patient's real enrollment status and the one action appropriate to that
+  status (Invite / open the consent screen / Enroll / Withdraw), plus the
+  trial's audit trail rendered as a table (color-coded by actor) right
+  there on the same screen — satisfying "surface it somewhere viewable"
+  directly, no separate page needed.
+- [x] **Caught and fixed a real performance bug during testing**: the
+  Enrollment tab's action buttons were re-running the full ~450-query,
+  30-60s candidate match loop just to reflect a single status change.
+  Fixed by caching the candidate list client-side per trial (`/enrollment`
+  and `/audit` are cheap and always refetched; `/db-candidates` only
+  refetches on a genuinely new trial) — actions now complete in ~3s.
+- [x] Tested end to end, twice — once via direct API calls (curl) to
+  verify the raw mechanics, once via the actual UI (Claude in Chrome) to
+  verify the real experience:
+  - Illegal transition rejected: `enroll` before any invite/consent →
+    `409`, `"Cannot enroll: patient must be 'consented' first; current
+    status is 'not invited'."` Confirmed again mid-flow (still `invited`,
+    not yet `consented`) — also correctly `409`.
+  - Full walk: invite → consent → enroll, each transition returning the
+    updated record with the right timestamp set (`invited_at`,
+    `consented_at`, `enrolled_at` **and `baseline_date`** together on
+    enroll). Verified all 4 `audit_log` rows directly in the DB: correct
+    order, correct actors (`researcher`/`patient`/`patient`/`researcher`),
+    correct `from_status`/`to_status`/`timestamp` in each `detail`.
+  - Loop closed: the newly-enrolled patient immediately appeared in step
+    6's `/progress` (enrolled count incremented, correct `baseline_date`,
+    existing labs correctly `no_data` since no follow-up reading exists
+    yet for them).
+  - UI walk repeated the same flow live: clicked Invite → opened the real
+    consent screen in a new tab → clicked Accept & consent → saw the
+    success message → reloaded the consent screen and confirmed it showed
+    "already responded" instead of re-submitting → back on the dashboard,
+    clicked Enroll → confirmed `ENROLLED` status, the new audit row, and
+    the enrolled count increment on the Trial progress tab, all live.
+- Known gap: `declined` has no dedicated timestamp column in the existing
+  schema (only `invited_at`/`consented_at`/`enrolled_at`/`withdrawn_at`
+  exist) — a decline only updates `status` and `updated_at`. Not fixed,
+  since the brief said not to change the DB schema; flagged instead.
 
 #### 8. Researcher/patient portal — NOT STARTED, large scope
 The full 19-step flow (researcher login, protocol upload, invitations,

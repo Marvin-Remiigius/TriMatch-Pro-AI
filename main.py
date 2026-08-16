@@ -8,14 +8,26 @@ from audit import get_audit_log, get_flagged_for_review, log_match_results
 from coarse_filter import coarse_filter_patient_ids
 from db import get_client
 from db_matching import match_patient_db
+from enrollment import (
+    InvalidTransitionError,
+    consent_patient,
+    decline_patient,
+    enroll_patient,
+    invite_patient,
+    list_enrollment,
+    list_trial_audit,
+    withdraw_patient,
+)
 from llm import parse_criteria
 from matching import match_patient
 from models import (
     AuditEntry,
+    AuditLogRow,
     Candidate,
     CandidateListResponse,
     DBCandidateListResponse,
     DBCandidateSummary,
+    EnrollmentRecord,
     ImportTrialResponse,
     MatchRequest,
     MatchResponse,
@@ -202,6 +214,55 @@ def compute_metrics(nct_id: str, primary_test_code: str | None = None):
     progress = compute_trial_progress(client, nct_id, primary_test_code=primary_test_code)
     store_trial_metrics(client, progress)
     return TrialProgressResponse(**progress)
+
+
+def _run_transition(fn, *args):
+    try:
+        return fn(*args)
+    except InvalidTransitionError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+
+
+@app.post("/trials/{nct_id}/patients/{patient_id}/invite", response_model=EnrollmentRecord)
+def invite(nct_id: str, patient_id: str):
+    client = get_client()
+    return _run_transition(invite_patient, client, patient_id, nct_id)
+
+
+@app.post("/trials/{nct_id}/patients/{patient_id}/consent", response_model=EnrollmentRecord)
+def consent(nct_id: str, patient_id: str):
+    client = get_client()
+    return _run_transition(consent_patient, client, patient_id, nct_id)
+
+
+@app.post("/trials/{nct_id}/patients/{patient_id}/enroll", response_model=EnrollmentRecord)
+def enroll(nct_id: str, patient_id: str):
+    client = get_client()
+    return _run_transition(enroll_patient, client, patient_id, nct_id)
+
+
+@app.post("/trials/{nct_id}/patients/{patient_id}/withdraw", response_model=EnrollmentRecord)
+def withdraw(nct_id: str, patient_id: str):
+    client = get_client()
+    return _run_transition(withdraw_patient, client, patient_id, nct_id)
+
+
+@app.post("/trials/{nct_id}/patients/{patient_id}/decline", response_model=EnrollmentRecord)
+def decline(nct_id: str, patient_id: str):
+    client = get_client()
+    return _run_transition(decline_patient, client, patient_id, nct_id)
+
+
+@app.get("/trials/{nct_id}/enrollment", response_model=list[EnrollmentRecord])
+def get_enrollment(nct_id: str):
+    client = get_client()
+    return list_enrollment(client, nct_id)
+
+
+@app.get("/trials/{nct_id}/audit", response_model=list[AuditLogRow])
+def get_trial_audit(nct_id: str, limit: int = 200):
+    client = get_client()
+    return list_trial_audit(client, nct_id, limit=limit)
 
 
 @app.get("/patients", response_model=list[Patient])

@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>TriMatch Pro AI — Trial Consent</title>
+<style>
+  :root {
+    --bg: #0C0D0F;
+    --panel: #141619;
+    --panel-2: #1A1D21;
+    --text: #E6E7E9;
+    --muted: #8A8F98;
+    --muted-2: #5D6169;
+    --line: #22252A;
+    --accent: #5B8DB8;
+    --accent-dim: rgba(91, 141, 184, 0.14);
+    --pass: #7BA786;
+    --pass-dim: rgba(123, 167, 134, 0.14);
+    --fail: #C06A5F;
+    --fail-dim: rgba(192, 106, 95, 0.14);
+    --unknown: #BCA274;
+    --unknown-dim: rgba(188, 162, 116, 0.14);
+    --radius: 3px;
+    --font-ui: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+    --ease: 140ms ease;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body { height: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 14px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    display: flex;
+    justify-content: center;
+    padding: 3rem 1.25rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+
+  button {
+    font-family: inherit;
+    font-size: inherit;
+    color: inherit;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .mono { font-family: var(--font-mono); }
+
+  .card {
+    width: 100%;
+    max-width: 560px;
+  }
+
+  .brand {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 2rem;
+  }
+
+  .brand .dim { color: var(--muted); font-weight: 400; }
+
+  .trial-box {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 1.1rem 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .trial-box .title {
+    font-weight: 600;
+    font-size: 15px;
+    margin-bottom: 0.3rem;
+  }
+
+  .trial-box .meta {
+    font-family: var(--font-mono);
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  h1 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 0.75rem;
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted-2);
+    margin-bottom: 0.5rem;
+  }
+
+  .terms {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.65;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    padding: 1.1rem 0;
+    margin: 1.25rem 0;
+  }
+
+  .terms p { margin: 0 0 0.85rem; }
+  .terms p:last-child { margin-bottom: 0; }
+
+  .actions {
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .btn {
+    flex: 1;
+    padding: 0.7rem 1rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    background: transparent;
+    cursor: pointer;
+    font-size: 13.5px;
+    transition: border-color var(--ease), background var(--ease), color var(--ease);
+  }
+
+  .btn-accept {
+    background: var(--pass-dim);
+    color: var(--pass);
+    border-color: transparent;
+  }
+  .btn-accept:hover { background: rgba(123, 167, 134, 0.22); }
+
+  .btn-decline {
+    color: var(--muted);
+  }
+  .btn-decline:hover { border-color: var(--muted-2); color: var(--text); }
+
+  .btn:disabled { opacity: 0.5; cursor: default; }
+
+  .status-box {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.4rem;
+  }
+
+  .status-box.success { border-color: rgba(123, 167, 134, 0.35); }
+  .status-box.declined { border-color: rgba(192, 106, 95, 0.35); }
+
+  .status-box .headline {
+    font-weight: 600;
+    font-size: 14.5px;
+    margin-bottom: 0.4rem;
+  }
+
+  .status-box .body {
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .footnote {
+    color: var(--muted-2);
+    font-size: 11px;
+    margin-top: 2rem;
+    text-align: center;
+  }
+
+  .skeleton { color: var(--muted-2); font-size: 13px; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="brand">TriMatch <span class="dim">Trial Consent</span></div>
+  <div id="content" class="skeleton">Loading…</div>
+  <div class="footnote">This is a prototype consent screen for demonstration — not a legally binding consent form.</div>
+</div>
+
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const patientId = params.get('patient');
+  const nctId = params.get('trial');
+  const content = document.getElementById('content');
+
+  function esc(str) {
+    if (str === null || str === undefined) return '';
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function shortId(id) {
+    return id && id.length > 10 ? id.slice(0, 8) : id;
+  }
+
+  function renderError(message) {
+    content.innerHTML = `<div class="status-box"><div class="headline">Something's not right</div><div class="body">${esc(message)}</div></div>`;
+  }
+
+  function renderAlreadyResponded(status) {
+    const labels = {
+      accepted: "You've already started responding to this invitation.",
+      consented: "You've already consented to this trial. A member of the research team will follow up about enrollment.",
+      enrolled: "You're enrolled in this trial. Thank you for participating.",
+      declined: "You've already declined this invitation.",
+      withdrawn: "You've withdrawn from this trial.",
+    };
+    content.innerHTML = `
+      <div class="status-box">
+        <div class="headline">Already responded</div>
+        <div class="body">${esc(labels[status] || `Current status: ${status}`)}</div>
+      </div>
+    `;
+  }
+
+  function renderNoInvitation() {
+    content.innerHTML = `
+      <div class="status-box">
+        <div class="headline">No pending invitation found</div>
+        <div class="body">We couldn't find an active invitation for this patient and trial. Check the link, or contact the research team.</div>
+      </div>
+    `;
+  }
+
+  function renderConsentForm(trial) {
+    const phase = Array.isArray(trial.phase) ? trial.phase.join(', ') : trial.phase;
+    content.innerHTML = `
+      <div class="trial-box">
+        <div class="title">${esc(trial.title || trial.nct_id)}</div>
+        <div class="meta">${esc(trial.nct_id)}${phase ? ' · ' + esc(phase) : ''}${trial.overall_status ? ' · ' + esc(trial.overall_status) : ''}</div>
+      </div>
+
+      <h1>Invitation to participate</h1>
+      <div class="eyebrow">Patient</div>
+      <div class="mono">${esc(shortId(patientId))}</div>
+
+      <div class="terms">
+        <p>You've been invited to take part in the trial above. Before you decide, please read the following:</p>
+        <p>Participation is voluntary. You may decline this invitation, and if you accept now, you may withdraw
+        from the trial at any time afterward without giving a reason.</p>
+        <p>If you consent, a research coordinator will review your case and confirm enrollment. Enrollment sets a
+        baseline date, and lab results taken from that point onward will be compared against your baseline values
+        to track your progress in the trial.</p>
+        <p>Your data is handled as part of this trial's records and reviewed by the research team for eligibility,
+        safety, and compliance purposes.</p>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-accept" id="acceptBtn">Accept &amp; consent</button>
+        <button class="btn btn-decline" id="declineBtn">Decline</button>
+      </div>
+    `;
+
+    document.getElementById('acceptBtn').addEventListener('click', () => respond('consent'));
+    document.getElementById('declineBtn').addEventListener('click', () => respond('decline'));
+  }
+
+  async function respond(action) {
+    const buttons = content.querySelectorAll('.btn');
+    buttons.forEach(b => b.disabled = true);
+
+    try {
+      const res = await fetch(`/trials/${encodeURIComponent(nctId)}/patients/${encodeURIComponent(patientId)}/${action}`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) {
+        renderError(data.detail || 'Could not record your response. Try again.');
+        return;
+      }
+
+      if (action === 'consent') {
+        content.innerHTML = `
+          <div class="status-box success">
+            <div class="headline">Thank you — your consent has been recorded</div>
+            <div class="body">A member of the research team will follow up to confirm your enrollment.</div>
+          </div>
+        `;
+      } else {
+        content.innerHTML = `
+          <div class="status-box declined">
+            <div class="headline">You've declined this invitation</div>
+            <div class="body">Thank you for considering. No further action is needed.</div>
+          </div>
+        `;
+      }
+    } catch (err) {
+      renderError('Could not reach the server. Try again.');
+    }
+  }
+
+  async function init() {
+    if (!patientId || !nctId) {
+      renderError('This link is missing patient or trial information.');
+      return;
+    }
+
+    try {
+      const [trialRes, enrollRes] = await Promise.all([
+        fetch(`/trials/${encodeURIComponent(nctId)}`),
+        fetch(`/trials/${encodeURIComponent(nctId)}/enrollment`),
+      ]);
+
+      const trial = await trialRes.json();
+      if (!trialRes.ok) {
+        renderError(trial.detail || 'No trial found for that ID.');
+        return;
+      }
+
+      const enrollment = await enrollRes.json();
+      const record = enrollRes.ok ? enrollment.find(e => e.patient_id === patientId) : null;
+
+      if (!record) {
+        renderNoInvitation();
+        return;
+      }
+
+      if (record.status === 'invited') {
+        renderConsentForm(trial);
+      } else {
+        renderAlreadyResponded(record.status);
+      }
+    } catch (err) {
+      renderError('Could not reach the server. Try again.');
+    }
+  }
+
+  init();
+</script>
+
+</body>
+</html>

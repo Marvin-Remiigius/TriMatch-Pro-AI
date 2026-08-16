@@ -185,3 +185,26 @@ class TrialProgressResponse(BaseModel):
     primary_test_code_used: Optional[str] = None
     improved_count: int
     patients: list[PatientProgress]
+
+
+class EnrollmentRecord(BaseModel):
+    patient_id: str
+    nct_id: str
+    status: str
+    baseline_date: Optional[str] = None
+    invited_at: Optional[str] = None
+    consented_at: Optional[str] = None
+    enrolled_at: Optional[str] = None
+    withdrawn_at: Optional[str] = None
+    updated_at: Optional[str] = None
+
+
+class AuditLogRow(BaseModel):
+    event_id: int
+    actor: Optional[str] = None
+    action: str
+    entity: str
+    entity_id: str
+    source_ref: Optional[str] = None
+    detail: Optional[dict] = None
+    created_at: str

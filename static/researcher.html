@@ -591,6 +591,102 @@
     font-size: 11px;
     color: var(--muted-2);
   }
+
+  /* ---------- Enrollment view ---------- */
+
+  .enrollment-row {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 0.65rem 0.8rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .er-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .er-id { font-family: var(--font-mono); font-size: 12.5px; }
+
+  .status-pill {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 0.15rem 0.5rem;
+    border-radius: var(--radius);
+    white-space: nowrap;
+  }
+
+  .status-pill.st-not_invited { background: rgba(93, 97, 105, 0.12); color: var(--muted-2); }
+  .status-pill.st-invited { background: var(--unknown-dim); color: var(--unknown); }
+  .status-pill.st-accepted { background: var(--unknown-dim); color: var(--unknown); }
+  .status-pill.st-consented { background: var(--accent-dim); color: var(--accent); }
+  .status-pill.st-enrolled { background: var(--pass-dim); color: var(--pass); }
+  .status-pill.st-declined { background: rgba(93, 97, 105, 0.12); color: var(--muted-2); }
+  .status-pill.st-withdrawn { background: var(--fail-dim); color: var(--fail); }
+
+  .er-actions {
+    display: flex;
+    gap: 0.4rem;
+    margin-top: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .er-btn {
+    font-size: 11.5px;
+    padding: 0.3rem 0.6rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    transition: border-color var(--ease), color var(--ease);
+  }
+
+  .er-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .er-btn.danger:hover { border-color: var(--fail); color: var(--fail); }
+  .er-btn:disabled { opacity: 0.45; cursor: default; }
+
+  .er-link {
+    font-size: 11.5px;
+    color: var(--accent);
+    text-decoration: none;
+  }
+  .er-link:hover { text-decoration: underline; }
+
+  .audit-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11.5px;
+  }
+
+  .audit-table th {
+    text-align: left;
+    color: var(--muted-2);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-weight: 400;
+    padding: 0.4rem 0.6rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .audit-table td {
+    padding: 0.45rem 0.6rem;
+    border-bottom: 1px solid var(--line);
+    font-family: var(--font-mono);
+    color: var(--muted);
+    vertical-align: top;
+  }
+
+  .audit-table td.actor-researcher { color: var(--accent); }
+  .audit-table td.actor-patient { color: var(--pass); }
 </style>
 </head>
 <body>
@@ -607,6 +703,7 @@
 <div class="tab-row" id="tabRow">
   <button class="tab-btn active" id="tabCandidates">Candidates</button>
   <button class="tab-btn" id="tabProgress">Trial progress</button>
+  <button class="tab-btn" id="tabEnrollment">Enrollment</button>
 </div>
 
 <div class="status-line" id="statusLine"></div>
@@ -637,6 +734,19 @@
   </main>
 </div>
 
+<div class="view" id="viewEnrollment">
+  <main class="workspace">
+    <section class="panel candidates-panel">
+      <div id="enrollmentSummary"></div>
+      <div class="candidate-list" id="enrollmentList"></div>
+    </section>
+
+    <section class="panel detail-panel" id="auditPanel">
+      <div class="detail-empty">Audit trail for this trial will appear here.</div>
+    </section>
+  </main>
+</div>
+
 <script>
   const nctInput = document.getElementById('nctInput');
   const loadBtn = document.getElementById('loadBtn');
@@ -648,15 +758,23 @@
   const tabRow = document.getElementById('tabRow');
   const tabCandidates = document.getElementById('tabCandidates');
   const tabProgress = document.getElementById('tabProgress');
+  const tabEnrollment = document.getElementById('tabEnrollment');
   const viewCandidates = document.getElementById('viewCandidates');
   const viewProgress = document.getElementById('viewProgress');
+  const viewEnrollment = document.getElementById('viewEnrollment');
   const metricsArea = document.getElementById('metricsArea');
   const progressList = document.getElementById('progressList');
   const progressDetailPanel = document.getElementById('progressDetailPanel');
+  const enrollmentSummary = document.getElementById('enrollmentSummary');
+  const enrollmentList = document.getElementById('enrollmentList');
+  const auditPanel = document.getElementById('auditPanel');
 
   let currentNctId = null;
   let selectedPatientId = null;
   let progressLoadedFor = null;
+  let enrollmentLoadedFor = null;
+  let cachedCandidates = null;
+  let cachedCandidatesFor = null;
 
   function esc(str) {
     if (str === null || str === undefined) return '';
@@ -691,8 +809,14 @@
     metricsArea.innerHTML = '';
     progressList.innerHTML = '';
     progressDetailPanel.innerHTML = '<div class="detail-empty">Select a patient to see their full test breakdown.</div>';
+    enrollmentSummary.innerHTML = '';
+    enrollmentList.innerHTML = '';
+    auditPanel.innerHTML = '<div class="detail-empty">Audit trail for this trial will appear here.</div>';
     selectedPatientId = null;
     progressLoadedFor = null;
+    enrollmentLoadedFor = null;
+    cachedCandidates = null;
+    cachedCandidatesFor = null;
     tabRow.classList.remove('visible');
     switchTab('candidates');
     setStatus('Loading trial…');
@@ -725,8 +849,10 @@
   function switchTab(tab) {
     tabCandidates.classList.toggle('active', tab === 'candidates');
     tabProgress.classList.toggle('active', tab === 'progress');
+    tabEnrollment.classList.toggle('active', tab === 'enrollment');
     viewCandidates.classList.toggle('active', tab === 'candidates');
     viewProgress.classList.toggle('active', tab === 'progress');
+    viewEnrollment.classList.toggle('active', tab === 'enrollment');
   }
 
   async function loadCandidates(nctId) {
@@ -955,11 +1081,165 @@
     `;
   }
 
+  function statusPillClass(status) {
+    return 'st-' + status;
+  }
+
+  function renderEnrollmentActions(patientId, status) {
+    const buttons = [];
+    if (status === 'not_invited') {
+      buttons.push(`<button class="er-btn" data-action="invite" data-pid="${esc(patientId)}">Invite</button>`);
+    }
+    if (status === 'invited') {
+      buttons.push(`<a class="er-link" href="/consent.html?patient=${encodeURIComponent(patientId)}&trial=${encodeURIComponent(currentNctId)}" target="_blank" rel="noopener">Open consent screen ↗</a>`);
+    }
+    if (status === 'consented') {
+      buttons.push(`<button class="er-btn" data-action="enroll" data-pid="${esc(patientId)}">Enroll</button>`);
+    }
+    if (['invited', 'accepted', 'consented', 'enrolled'].includes(status)) {
+      buttons.push(`<button class="er-btn danger" data-action="withdraw" data-pid="${esc(patientId)}">Withdraw</button>`);
+    }
+    return buttons.join('');
+  }
+
+  async function loadEnrollment(nctId, quiet) {
+    const haveCache = cachedCandidatesFor === nctId && cachedCandidates !== null;
+
+    if (!quiet && !haveCache) {
+      enrollmentSummary.innerHTML = '<div class="skeleton">Loading candidates and enrollment status…</div>';
+      enrollmentList.innerHTML = '';
+    }
+
+    try {
+      let candidates;
+      if (haveCache) {
+        candidates = cachedCandidates;
+      } else {
+        const candRes = await fetch(`/trials/${encodeURIComponent(nctId)}/db-candidates?limit=50&max_evaluate=150`);
+        const candData = await candRes.json();
+        if (!candRes.ok) {
+          enrollmentSummary.innerHTML = `<div class="detail-empty">${esc(candData.detail || 'No parsed criteria for this trial yet.')}</div>`;
+          return;
+        }
+        candidates = candData.candidates;
+        cachedCandidates = candidates;
+        cachedCandidatesFor = nctId;
+      }
+
+      const enrollRes = await fetch(`/trials/${encodeURIComponent(nctId)}/enrollment`);
+      const enrollData = await enrollRes.json();
+
+      enrollmentLoadedFor = nctId;
+      const statusByPatient = {};
+      if (enrollRes.ok) {
+        enrollData.forEach(e => { statusByPatient[e.patient_id] = e.status; });
+      }
+
+      const counts = {};
+      candidates.forEach(c => {
+        const st = statusByPatient[c.patient_id] || 'not_invited';
+        counts[st] = (counts[st] || 0) + 1;
+      });
+
+      enrollmentSummary.innerHTML = `
+        <div class="funnel">
+          <div class="funnel-figure">${candidates.length}<span class="of"> candidates</span></div>
+          <div class="funnel-label">from the ranked list</div>
+          <div class="funnel-sub">${Object.entries(counts).map(([k, v]) => `${v} ${k.replace('_', ' ')}`).join(' · ')}</div>
+        </div>
+      `;
+
+      enrollmentList.innerHTML = candidates.map(c => {
+        const status = statusByPatient[c.patient_id] || 'not_invited';
+        return `
+          <div class="enrollment-row">
+            <div class="er-top">
+              <span class="er-id mono">${esc(shortId(c.patient_id))}</span>
+              <span class="badge ${badgeClass(c.overall)}">${esc(c.overall)}</span>
+            </div>
+            <div class="candidate-demo">
+              <span class="status-pill ${statusPillClass(status)}">${esc(status.replace('_', ' '))}</span>
+            </div>
+            <div class="er-actions">${renderEnrollmentActions(c.patient_id, status)}</div>
+          </div>
+        `;
+      }).join('');
+
+      enrollmentList.querySelectorAll('.er-btn').forEach(btn => {
+        btn.addEventListener('click', () => performAction(btn.dataset.pid, btn.dataset.action));
+      });
+
+      await loadAuditTrail(nctId);
+    } catch (err) {
+      enrollmentSummary.innerHTML = '<div class="detail-empty">Could not reach the server. Try again.</div>';
+    }
+  }
+
+  async function loadAuditTrail(nctId) {
+    auditPanel.innerHTML = '<div class="skeleton">Loading audit trail…</div>';
+    try {
+      const res = await fetch(`/trials/${encodeURIComponent(nctId)}/audit?limit=100`);
+      const data = await res.json();
+      if (!res.ok) {
+        auditPanel.innerHTML = `<div class="detail-empty">${esc(data.detail || 'Could not load audit trail.')}</div>`;
+        return;
+      }
+      if (data.length === 0) {
+        auditPanel.innerHTML = '<div class="detail-empty">No audit events for this trial yet.</div>';
+        return;
+      }
+      const rows = data.map(row => {
+        const detail = row.detail ? `${esc(row.detail.from_status || '—')} → ${esc(row.detail.to_status || '—')}` : '—';
+        return `
+          <tr>
+            <td>${esc((row.created_at || '').replace('T', ' ').slice(0, 19))}</td>
+            <td class="actor-${esc(row.actor)}">${esc(row.actor)}</td>
+            <td>${esc(row.action)}</td>
+            <td>${esc((row.entity_id || '').split(':')[0].slice(0, 8))}</td>
+            <td>${detail}</td>
+          </tr>
+        `;
+      }).join('');
+      auditPanel.innerHTML = `
+        <div class="eyebrow group-label">Audit trail</div>
+        <div style="overflow-x: auto;">
+          <table class="audit-table">
+            <thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Patient</th><th>Transition</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      `;
+    } catch (err) {
+      auditPanel.innerHTML = '<div class="detail-empty">Could not reach the server. Try again.</div>';
+    }
+  }
+
+  async function performAction(patientId, action) {
+    try {
+      const res = await fetch(`/trials/${encodeURIComponent(currentNctId)}/patients/${encodeURIComponent(patientId)}/${action}`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.detail || 'Action failed.');
+        return;
+      }
+      setStatus('');
+      await loadEnrollment(currentNctId, true);
+    } catch (err) {
+      setError('Could not reach the server. Try again.');
+    }
+  }
+
   tabCandidates.addEventListener('click', () => switchTab('candidates'));
   tabProgress.addEventListener('click', () => {
     switchTab('progress');
     if (currentNctId && progressLoadedFor !== currentNctId) {
       loadProgress(currentNctId);
+    }
+  });
+  tabEnrollment.addEventListener('click', () => {
+    switchTab('enrollment');
+    if (currentNctId && enrollmentLoadedFor !== currentNctId) {
+      loadEnrollment(currentNctId, false);
     }
   });
 
