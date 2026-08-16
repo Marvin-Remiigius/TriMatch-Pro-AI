@@ -975,6 +975,32 @@ unknown pattern unchanged); both existing hero trials (NCT07348718,
 NCT04791358) still match successfully. Every prior trial kept, none
 deleted. Only code change: the additive `get_trial` fallback in `main.py`.
 
+## TM-METABOLIC-001 demo enrollment + trial-health seeding (2026-08-16) — DONE
+
+Pure data enrichment for the hero trial's demo, using only existing
+endpoints/functions -- no code changes.
+
+- 7 eligible candidates taken through the real state machine (invite ->
+  consent -> enroll via `enrollment.py`'s existing functions), so
+  `baseline_date` is genuinely set by the same `enroll_patient()` path a
+  researcher action uses -- not backdated or special-cased.
+- For each, added one follow-up `lab_results` row per test the hero trial
+  actually reads (eGFR, HbA1c, ALT) dated 3-10 weeks after their own
+  baseline_date, with a modest (~4%) random perturbation *from that
+  patient's own baseline value* -- not resampled from the population like
+  `scripts/seed_extra_labs.py` does, since a real follow-up reading should
+  track the same person, not a fresh random patient. AST/creatinine/HGB
+  were deliberately left unseeded for these patients, so their progress
+  view honestly shows `no_data` rather than a fabricated trend.
+- Result, read live from `/trials/TM-METABOLIC-001/progress`: 7 enrolled,
+  7 active, 0 dropouts, 43% improved on the auto-selected primary test
+  (ALT) -- a genuine mixed outcome (some patients improved, some
+  worsened, per test), not curated to look good. Verified live in the
+  researcher dashboard's Trial Progress tab.
+- No git-trackable change -- this is Supabase row data (`patient_trial`,
+  `lab_results`, `audit_log`), same category as the hero-trial criteria
+  import earlier. Logged here for the record, same as that was.
+
 ## Demo narrative (what to show judges)
 1. Paste a real trial's messy eligibility text → watch it become clean rules.
 2. Show a ranked list of patients for that trial.
