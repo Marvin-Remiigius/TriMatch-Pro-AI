@@ -55,21 +55,34 @@ class Criterion(BaseModel):
     # When absent/empty, callers fall back to the single field/operator/value
     # above -- existing single-rule behavior is completely unchanged.
     rules: Optional[list[Rule]] = None
+    # New, additive: alternative pathways to satisfy ONE criterion (e.g. a
+    # parent bullet's requirement met via any one of several child bullets,
+    # or a single-sentence "X, and/or Y"). Each inner list is AND'd
+    # internally (same semantics as `rules`); the outer list is OR'd --
+    # satisfying any one group is enough. Mutually exclusive with `rules`;
+    # when absent, callers fall back to `rules` -- existing behavior for
+    # every criterion that doesn't use this is completely unchanged.
+    rule_groups: Optional[list[list[Rule]]] = None
     needs_review: bool = False
     reason: Optional[str] = None
 
     @model_validator(mode="after")
     def _mirror_first_rule(self):
         # Keeps the legacy top-level field/operator/value/unit populated
-        # (from rules[0]) for anything still reading them directly, so
-        # criteria parsed under the new rules-only schema stay fully
-        # backward compatible with old consumers.
-        if self.rules and self.field is None and self.operator is None and self.value is None:
-            first = self.rules[0]
-            self.field = first.field
-            self.operator = first.operator
-            self.value = first.value
-            self.unit = first.unit
+        # (from rule_groups[0][0], or rules[0]) for anything still reading
+        # them directly, so criteria parsed under the newer schemas stay
+        # fully backward compatible with old consumers.
+        if self.field is None and self.operator is None and self.value is None:
+            first = None
+            if self.rule_groups and self.rule_groups[0]:
+                first = self.rule_groups[0][0]
+            elif self.rules:
+                first = self.rules[0]
+            if first is not None:
+                self.field = first.field
+                self.operator = first.operator
+                self.value = first.value
+                self.unit = first.unit
         return self
 
 
@@ -89,6 +102,10 @@ class RuleResult(BaseModel):
     condition_met: Optional[bool] = None  # None = unknown (missing data)
     source_lab_result_id: Optional[int] = None
     reason: str
+    # New, additive: which OR'd alternative-pathway group this rule belongs
+    # to (0-based), only set when the criterion used rule_groups with more
+    # than one group. None for the plain flat-AND case -- unchanged.
+    group: Optional[int] = None
 
 
 class CriterionMatch(BaseModel):

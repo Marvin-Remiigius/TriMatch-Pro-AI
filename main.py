@@ -77,7 +77,27 @@ def _criterion_to_db_row(nct_id: str, c: Criterion) -> dict:
     (single scalar in `value`); a criterion with 2+ rules stores the full
     rule list as JSON in that same `value` column (field/operator/unit
     mirror the first rule, for backward compat with anything -- e.g.
-    coarse_filter.py -- that only reads the top-level columns)."""
+    coarse_filter.py -- that only reads the top-level columns). A criterion
+    with rule_groups (OR of AND-groups, for alternative pathways) stores
+    {"rule_groups": [[...], ...]} as JSON in the same `value` column -- a
+    JSON *object*, distinguishable from the flat rule-list *array* encoding
+    above, so db_matching.py can tell them apart without a schema change."""
+    if c.rule_groups:
+        first_group = c.rule_groups[0] if c.rule_groups else []
+        first = first_group[0] if first_group else None
+        return {
+            "nct_id": nct_id,
+            "type": c.type,
+            "raw_text": c.text,
+            "field": first.field if first else None,
+            "operator": first.operator if first else None,
+            "value": json.dumps(
+                {"rule_groups": [[r.model_dump() for r in group] for group in c.rule_groups]}
+            ),
+            "unit": first.unit if first else None,
+            "needs_review": c.needs_review,
+        }
+
     if c.rules and len(c.rules) > 1:
         first = c.rules[0]
         return {

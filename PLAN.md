@@ -752,6 +752,83 @@ was deleted.
 
 ---
 
+## OR-of-AND rule groups + contains-operator fix (2026-08-16) — DONE
+
+Follow-up to the hero-trials evaluation above. That evaluation surfaced two
+real, separate issues; both are fixed here, additively, with full
+regression coverage.
+
+- **Cross-criteria OR (the structural gap flagged in the hero-trials
+  write-up)**: Trial B's real text nests two alternative eGFR pathways
+  under one shared parent bullet ("Evidence of DKD Stages 1-3:"), which
+  the importer previously flattened into two independent top-level
+  criteria -- and since the matcher ANDs every top-level criterion, no
+  patient could ever satisfy both mutually-exclusive eGFR ranges at once.
+  Fixed with a new, additive `rule_groups` field on `Criterion`: a list of
+  AND-groups that are OR'd together (satisfying any ONE group is enough).
+  `rules` (flat AND, unchanged) and the legacy top-level field/operator/
+  value both still work exactly as before -- `rule_groups` is purely
+  additive, and a single AND-group is the degenerate case of the new OR
+  combination, verified byte-identical to the pre-change output for every
+  existing criterion. Encoded into the same `trial_criteria.value` TEXT
+  column as `{"rule_groups": [[...], ...]}` (a JSON *object*, vs. the
+  existing flat-array encoding for `rules`) -- no DB schema change. The
+  LLM prompt (`llm.py`) now recognizes both the "parent bullet + child
+  bullets" pattern and inline "X, and/or Y" phrasing, with two new worked
+  examples (including one that combines `rule_groups` with a still-true
+  `needs_review` for a separate uncaptured qualifier, e.g. Trial A's
+  "with evidence of chronicity" clause). Re-parsing Trial B now correctly
+  merges what were criteria 89+90 into one 10-criterion trial (was 11);
+  re-parsing Trial A structures its previously-fully-unstructured CKD/eGFR
+  criterion into `rule_groups` too, though it stays needs_review (its own
+  chronicity qualifier is separately uncaptured, correctly).
+- **`contains`/`not_contains` operator bug (found while verifying the fix
+  above, unrelated to it)**: `_evaluate_condition` in `matching.py` was
+  comparing with `==` instead of substring containment -- so "contains
+  type 2 diabetes" only matched a diagnosis label that was *exactly*
+  "type 2 diabetes", never realistic clinical text like "Type 2 diabetes
+  mellitus without complications". This silently made every diagnosis-
+  or medication-based inclusion criterion across the *entire project*
+  (both hero trials, and any future trial) fail for every real patient,
+  no matter their actual diagnosis -- explains why every candidate screen
+  all session showed a uniform diagnosis-fail rather than the T2DM cohort
+  (106/1000 patients) actually passing. Fixed to real substring matching
+  (`needle in haystack`), matching the field's documented intent and the
+  LLM prompt's own description of the operator. `db_matching.py` shares
+  the same `_evaluate_condition` function, so one fix covers both the
+  in-memory and Supabase matchers.
+- **Verification**: direct Kleene-logic unit tests for all 5 OR-group
+  truth-table cases (known-true/known-false/unknown in every combination)
+  before touching the server; DB encode/decode round-trip tests for
+  `rule_groups` vs. the legacy flat-array and single-scalar encodings;
+  live regression against the pre-existing `NCT04280705` trial (byte-
+  identical verdicts/reasons before and after both changes); live
+  end-to-end test of a `rule_groups` criterion through the real Phase 1
+  `/match` HTTP endpoint; and, most concretely, matched a real patient
+  with eGFR 19.97 mL/min/1.73m2 and a real "Type 2 diabetes mellitus
+  without complications" diagnosis against Trial B post-fix and confirmed
+  the full honest chain: age pass, diagnosis pass (previously always
+  failed), eGFR **fail** with a legible "Path 1: ... OR Path 2: ..."
+  explanation citing the real lab value, remaining unstructured criteria
+  correctly unknown, overall `ineligible` -- genuinely traceable, not
+  uniform. Aggregate impact on a 50-patient sample: both hero trials moved
+  from 100% `ineligible` (every session before this fix) to a real mix of
+  `ineligible` / `needs more data`, with Trial B showing 3 distinct
+  verdict-count shapes (vs. Trial A's 2) and the only trial where the
+  eGFR criterion can reach a definitive `fail` (Trial A's DKD criterion is
+  a one-sided `eGFR<60` with no upper bound, so by the trial's own written
+  logic it can never be definitively disqualified by eGFR alone) --
+  reinforcing Trial B as the stronger hero trial.
+- Full regression pass after both changes: `/health`, `/patients`,
+  `/trials/{nct}/progress`, `/trials/{nct}/enrollment`, `/trials/{nct}/
+  audit`, `/audit-log`, `/flagged-for-review` all still 200; the
+  pre-existing `NCT04280705` trial's candidate screen unchanged.
+- Known limitation, unchanged: `trial_criteria` still has no `reason`
+  column, so a `rule_groups` criterion's needs_review explanation (e.g.
+  "the chronicity qualifier isn't captured") lives in the live parse
+  response but isn't persisted to the DB -- same pre-existing gap noted
+  under the compound-criteria step.
+
 ## Demo narrative (what to show judges)
 1. Paste a real trial's messy eligibility text → watch it become clean rules.
 2. Show a ranked list of patients for that trial.

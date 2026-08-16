@@ -91,9 +91,13 @@ def _evaluate_condition(patient_value, operator: str, criterion_value):
         return (equal if operator == "==" else not equal), None
 
     if operator in ("contains", "not_contains"):
+        # Substring match, not exact match -- diagnosis/medication text is
+        # verbose clinical phrasing (e.g. "Type 2 diabetes mellitus without
+        # complications"), never literally equal to a short criterion term
+        # like "type 2 diabetes".
         haystack = _to_list(patient_value)
         needle = str(criterion_value).strip().lower()
-        found = any(str(item).strip().lower() == needle for item in haystack)
+        found = any(needle in str(item).strip().lower() for item in haystack)
         return (found if operator == "contains" else not found), None
 
     if operator in ("in", "not_in"):
@@ -164,10 +168,45 @@ def _effective_rules(criterion: Criterion) -> list[Rule]:
     return []
 
 
-def evaluate_criterion(criterion: Criterion, patient: Patient) -> CriterionMatch:
+def _effective_rule_groups(criterion: Criterion) -> list[list[Rule]]:
+    """Returns criterion.rule_groups if present (OR of AND-groups);
+    otherwise wraps _effective_rules() in a single group, so a criterion
+    with only `rules` (or only the legacy top-level fields) behaves exactly
+    as before -- a single AND-group is the len(rule_groups)==1 degenerate
+    case of the OR combination below."""
+    if criterion.rule_groups:
+        return criterion.rule_groups
     rules = _effective_rules(criterion)
+    return [rules] if rules else []
 
-    if criterion.needs_review and not rules:
+
+def _combine_and(evaluations: list[dict]):
+    """Kleene AND across sub-rule evaluations: a known-false rule makes the
+    whole group false regardless of other unknowns; otherwise any unknown
+    makes the group unknown; only all-known-true is true."""
+    if any(e["status"] == "known" and e["condition_true"] is False for e in evaluations):
+        return False
+    if any(e["status"] == "unknown" for e in evaluations):
+        return None
+    return True
+
+
+def _combine_or(group_results: list):
+    """Kleene OR across alternative-pathway groups: any known-true group
+    makes the whole thing true regardless of others; otherwise any unknown
+    group makes it unknown (a group we can't rule out might still pass);
+    only all-known-false is false."""
+    if any(g is True for g in group_results):
+        return True
+    if any(g is None for g in group_results):
+        return None
+    return False
+
+
+def evaluate_criterion(criterion: Criterion, patient: Patient) -> CriterionMatch:
+    rule_groups = _effective_rule_groups(criterion)
+
+    if criterion.needs_review and not rule_groups:
         return CriterionMatch(
             id=criterion.id,
             type=criterion.type,
@@ -177,7 +216,7 @@ def evaluate_criterion(criterion: Criterion, patient: Patient) -> CriterionMatch
             reason=criterion.reason or "Criterion could not be structured; needs human review.",
         )
 
-    if not rules:
+    if not rule_groups:
         return CriterionMatch(
             id=criterion.id,
             type=criterion.type,
@@ -187,18 +226,9 @@ def evaluate_criterion(criterion: Criterion, patient: Patient) -> CriterionMatch
             reason="Criterion is missing field/operator/value.",
         )
 
-    evaluations = [_evaluate_single_rule(patient, r) for r in rules]
-
-    # Kleene AND across sub-rules: a known-false rule makes the whole
-    # compound condition false regardless of any unknowns (False AND
-    # anything is False); otherwise any unknown rule makes the combined
-    # result unknown; only when every rule is known-true is it true.
-    if any(e["status"] == "known" and e["condition_true"] is False for e in evaluations):
-        combined_true = False
-    elif any(e["status"] == "unknown" for e in evaluations):
-        combined_true = None
-    else:
-        combined_true = True
+    group_evaluations = [[_evaluate_single_rule(patient, r) for r in group] for group in rule_groups]
+    group_results = [_combine_and(evals) for evals in group_evaluations]
+    combined_true = _combine_or(group_results)
 
     # Inclusion: combined condition true means the patient meets the
     # requirement (pass). Exclusion: combined condition true means the
@@ -215,11 +245,10 @@ def evaluate_criterion(criterion: Criterion, patient: Patient) -> CriterionMatch
     # Honesty guard for partially-structured criteria: needs_review can now
     # stay true even when some rules were extracted (a genuinely
     # unstructurable remainder exists). A "fail" from the checked part is
-    # still valid (AND with anything false is false), but a "pass" only
-    # confirms the checked part, not the whole original criterion -- don't
-    # let that read as a full pass.
+    # still valid, but a "pass" only confirms the checked part, not the
+    # whole original criterion -- don't let that read as a full pass.
     partial_note = None
-    if criterion.needs_review and rules and verdict == "pass":
+    if criterion.needs_review and rule_groups and verdict == "pass":
         verdict = "unknown"
         partial_note = (
             "this criterion is only partially structured "
@@ -227,18 +256,31 @@ def evaluate_criterion(criterion: Criterion, patient: Patient) -> CriterionMatch
             "full compliance not confirmed"
         )
 
-    if len(rules) == 1:
-        reason = evaluations[0]["reason"]
-        patient_value = evaluations[0]["patient_value"]
+    all_evaluations = [e for evals in group_evaluations for e in evals]
+
+    if len(rule_groups) > 1:
+        # OR-of-AND: make the alternative pathways explicit in the reason
+        # text rather than joining every sub-rule's reason flat, which
+        # would read like an AND explanation.
+        path_parts = []
+        for i, evals in enumerate(group_evaluations, start=1):
+            inner = "; ".join(e["reason"] for e in evals)
+            path_parts.append(f"Path {i}: {inner}")
+        reason = " OR ".join(path_parts)
+        patient_value = [e["patient_value"] for e in all_evaluations]
+    elif len(all_evaluations) == 1:
+        reason = all_evaluations[0]["reason"]
+        patient_value = all_evaluations[0]["patient_value"]
     else:
-        reason = "; ".join(e["reason"] for e in evaluations)
-        patient_value = [e["patient_value"] for e in evaluations]
+        reason = "; ".join(e["reason"] for e in all_evaluations)
+        patient_value = [e["patient_value"] for e in all_evaluations]
 
     if partial_note:
         reason = f"{reason} — {partial_note}"
 
     rule_results = None
-    if criterion.rules:
+    if criterion.rules or criterion.rule_groups:
+        multi_group = len(rule_groups) > 1
         rule_results = [
             RuleResult(
                 field=r.field,
@@ -247,8 +289,10 @@ def evaluate_criterion(criterion: Criterion, patient: Patient) -> CriterionMatch
                 patient_value=e["patient_value"],
                 condition_met=e["condition_true"],
                 reason=e["reason"],
+                group=gi if multi_group else None,
             )
-            for r, e in zip(rules, evaluations)
+            for gi, (group, evals) in enumerate(zip(rule_groups, group_evaluations))
+            for r, e in zip(group, evals)
         ]
 
     return CriterionMatch(

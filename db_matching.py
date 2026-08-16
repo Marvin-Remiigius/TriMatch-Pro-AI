@@ -1,6 +1,6 @@
 import json
 
-from matching import _evaluate_condition, _normalize_op
+from matching import _combine_and, _combine_or, _evaluate_condition, _normalize_op
 from models import CriterionMatch, RuleResult
 
 # The parser (llm.py) writes lowercase snake_case lab names, e.g. "lab.hba1c",
@@ -189,15 +189,33 @@ def _effective_db_rules(criterion_row: dict) -> list:
     return []
 
 
+def _effective_db_rule_groups(criterion_row: dict) -> list:
+    """Returns a list of rule-lists (OR of AND-groups) to evaluate. If the
+    stored `value` decodes to {"rule_groups": [[...], ...]} (the new
+    alternative-pathways encoding, distinguished from the flat multi-rule
+    array by being a JSON *object* rather than a JSON array -- no DB schema
+    change, same `value` TEXT column), uses that. Otherwise wraps
+    _effective_db_rules() in a single group, so criteria stored before this
+    change (a flat rule list, or none) evaluate identically to before --
+    a single AND-group is the len(rule_groups)==1 degenerate case of the
+    OR combination in evaluate_db_criterion."""
+    value = _parse_stored_value(criterion_row.get("value"))
+    if isinstance(value, dict) and isinstance(value.get("rule_groups"), list):
+        return value["rule_groups"]
+
+    rules = _effective_db_rules(criterion_row)
+    return [rules] if rules else []
+
+
 def evaluate_db_criterion(client, patient_id: str, criterion_row: dict) -> CriterionMatch:
     criterion_id = str(criterion_row["criterion_id"])
     ctype = criterion_row["type"]
     text = criterion_row.get("raw_text") or ""
     field = criterion_row.get("field")
 
-    rules = _effective_db_rules(criterion_row)
+    rule_groups = _effective_db_rule_groups(criterion_row)
 
-    if criterion_row.get("needs_review") and not rules:
+    if criterion_row.get("needs_review") and not rule_groups:
         return CriterionMatch(
             id=criterion_id,
             type=ctype,
@@ -207,7 +225,7 @@ def evaluate_db_criterion(client, patient_id: str, criterion_row: dict) -> Crite
             reason="Criterion could not be structured; needs human review.",
         )
 
-    if not rules:
+    if not rule_groups:
         return CriterionMatch(
             id=criterion_id,
             type=ctype,
@@ -217,21 +235,15 @@ def evaluate_db_criterion(client, patient_id: str, criterion_row: dict) -> Crite
             reason="Criterion is missing field/operator/value.",
         )
 
-    evaluations = [
-        _evaluate_single_db_rule(client, patient_id, r.get("field"), r.get("operator"), r.get("value"))
-        for r in rules
+    group_evaluations = [
+        [
+            _evaluate_single_db_rule(client, patient_id, r.get("field"), r.get("operator"), r.get("value"))
+            for r in group
+        ]
+        for group in rule_groups
     ]
-
-    # Same Kleene-AND combination as the in-memory matcher: a known-false
-    # rule makes the whole compound condition false regardless of other
-    # unknowns; otherwise any unknown makes the combined result unknown;
-    # only all-known-true is true.
-    if any(e["status"] == "known" and e["condition_true"] is False for e in evaluations):
-        combined_true = False
-    elif any(e["status"] == "unknown" for e in evaluations):
-        combined_true = None
-    else:
-        combined_true = True
+    group_results = [_combine_and(evals) for evals in group_evaluations]
+    combined_true = _combine_or(group_results)
 
     if combined_true is None:
         verdict = "unknown"
@@ -242,26 +254,42 @@ def evaluate_db_criterion(client, patient_id: str, criterion_row: dict) -> Crite
 
     # Same partial-criterion honesty guard as the in-memory matcher.
     partial_note = None
-    if criterion_row.get("needs_review") and rules and verdict == "pass":
+    if criterion_row.get("needs_review") and rule_groups and verdict == "pass":
         verdict = "unknown"
         partial_note = "this criterion is only partially structured; full compliance not confirmed"
 
-    if len(rules) == 1:
-        reason = evaluations[0]["reason"]
-        patient_value = evaluations[0]["patient_value"]
-        source_lab_result_id = evaluations[0]["source_lab_result_id"]
-    else:
-        reason = "; ".join(e["reason"] for e in evaluations)
-        patient_value = [e["patient_value"] for e in evaluations]
+    all_evaluations = [e for evals in group_evaluations for e in evals]
+
+    if len(rule_groups) > 1:
+        # OR-of-AND: make the alternative pathways explicit rather than
+        # joining every sub-rule's reason flat, which would read like an
+        # AND explanation.
+        path_parts = []
+        for i, evals in enumerate(group_evaluations, start=1):
+            inner = "; ".join(e["reason"] for e in evals)
+            path_parts.append(f"Path {i}: {inner}")
+        reason = " OR ".join(path_parts)
+        patient_value = [e["patient_value"] for e in all_evaluations]
         source_lab_result_id = next(
-            (e["source_lab_result_id"] for e in evaluations if e["source_lab_result_id"]), None
+            (e["source_lab_result_id"] for e in all_evaluations if e["source_lab_result_id"]), None
+        )
+    elif len(all_evaluations) == 1:
+        reason = all_evaluations[0]["reason"]
+        patient_value = all_evaluations[0]["patient_value"]
+        source_lab_result_id = all_evaluations[0]["source_lab_result_id"]
+    else:
+        reason = "; ".join(e["reason"] for e in all_evaluations)
+        patient_value = [e["patient_value"] for e in all_evaluations]
+        source_lab_result_id = next(
+            (e["source_lab_result_id"] for e in all_evaluations if e["source_lab_result_id"]), None
         )
 
     if partial_note:
         reason = f"{reason} — {partial_note}"
 
     rule_results = None
-    if len(rules) > 1:
+    if len(all_evaluations) > 1:
+        multi_group = len(rule_groups) > 1
         rule_results = [
             RuleResult(
                 field=r.get("field"),
@@ -271,8 +299,10 @@ def evaluate_db_criterion(client, patient_id: str, criterion_row: dict) -> Crite
                 condition_met=e["condition_true"],
                 source_lab_result_id=e["source_lab_result_id"],
                 reason=e["reason"],
+                group=gi if multi_group else None,
             )
-            for r, e in zip(rules, evaluations)
+            for gi, (group, evals) in enumerate(zip(rule_groups, group_evaluations))
+            for r, e in zip(group, evals)
         ]
 
     return CriterionMatch(
