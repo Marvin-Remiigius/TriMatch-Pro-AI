@@ -876,6 +876,105 @@ changes.
   already-withdrawn), and no-invitation/error paths -- all render
   correctly with zero backend changes required.
 
+## Population-friendly hero trial: TM-METABOLIC-001 (2026-08-16) — DONE
+
+Goal: a candidate screen that's mostly `eligible`, honestly. Diagnose-first,
+then pick a trial our population genuinely passes -- no matcher changes to
+force it.
+
+**Part 1 -- diagnosed NCT07348718's low-eligible mix. No bug found.**
+Per-criterion tally across 200 patients: age (pass=200), T2DM-required
+diagnosis inclusion (pass=31, fail=169), eGFR/UACR DKD criterion (unknown=200
+for all), T1DM exclusion (pass=200). The eGFR criterion's `unknown` is NOT a
+field-mapping bug -- hand-verified the real eGFR value resolves correctly
+(e.g. 64.1989, cited) every time; it's `unknown` because the real criterion
+text is "eGFR<60 and/or UACR>=30" and we have zero UACR data, so the OR can
+never be ruled out for the ~89% of patients with eGFR>=60. Hand-checked the
+T1DM exclusion against a real T2DM patient (verdict `pass`, correctly not
+excluded) and confirmed zero patients in the dataset even have a T1DM
+diagnosis, so the exclusion is untestable-but-correctly-inert, not broken.
+Bottleneck is legitimate: only 106/1000 patients have T2DM, and the trial
+requires it. Nothing fixed here because nothing was broken.
+
+**Part 2, Option 1 -- NCT04589351 control-group arm. Tried it, real
+findings, real bug found (not in Part 1's trial).** The full eligibility
+text mixes four distinct cohort definitions (intervention arm, control
+group, two more) with contradictory criteria (e.g. one arm requires T2D,
+another excludes it) -- feeding the whole document to the parser would
+silently conflate cohorts, so only the "control group" section (age 40-75,
+eGFR>=60, plus its own exclusions) was excerpted and parsed on its own.
+- **Found a real, generalizable bug while verifying this**: 4 of the 16
+  parsed criteria expressed an exclusion using `not_contains` (e.g. "not
+  contains diabetes mellitus") combined via AND/single-rule -- semantically
+  the opposite of our established convention (state the *disqualifying*
+  condition via `contains`; the matcher's exclusion-inversion handles the
+  rest). Combined with correct, unchanged matcher logic, this inverted the
+  result: a real test showed a patient with only hypertension (no diabetes/
+  CKD/heart disease/COPD) scored `fail` (wrongly excluded), while a genuine
+  T2DM patient scored `pass` (wrongly included) -- exactly backwards.
+  **The matcher was not touched.** Fixed by correcting the stored criteria
+  rows to the existing, already-tested pattern: `rule_groups` of
+  `contains`-phrased alternatives for the multi-disease criterion, and
+  `contains` (not `not_contains`) for the three single-condition ones.
+  Re-verified against the same two patients: hypertension-only patient no
+  longer wrongly excluded; T2DM patient now correctly `fail`s. This is a
+  real LLM-prompt-phrasing gap (parallel to the earlier SpO2 OR-extraction
+  bug), generalizable beyond this one trial -- flagged here, not fixed at
+  the prompt level, since that's a bigger change out of scope for this task.
+- **Even fully fixed, this real trial cannot produce `eligible` verdicts,
+  and that's inherent to using real trial text, not a bug.** Matched 150
+  patients before and after the fix: before, 150/150 `ineligible` (the
+  inversion bug was wrongly excluding everyone); after, 40 `needs more
+  data` / 110 `ineligible`, zero `eligible`. Ten of its sixteen criteria
+  (informed consent capacity, investigator judgment, "no other study
+  participation," MR-scanner contraindications, compliance, etc.) are
+  either fully unstructurable or partially-structured-but-`needs_review`
+  (so a would-be pass is honestly downgraded to `unknown`, never
+  overclaimed) -- every real ClinicalTrials.gov trial has soft criteria
+  like these, so no real trial will ever clear the `needs_review` bar on
+  every criterion. This is reported as the honest answer for Option 1, not
+  worked around.
+
+**Part 2, Option 2 -- custom trial `TM-METABOLIC-001` ("Metabolic Health
+Screening Cohort"), chosen as the hero.** Four fully-structurable criteria,
+each grounded in real coverage (age, eGFR, HbA1c universal; ALT universal):
+inclusion age>=18, inclusion eGFR>=30 mL/min/1.73m2, inclusion HbA1c<=7.5%,
+exclusion ALT>80 U/L. No `needs_review` criteria at all, so nothing is ever
+capped at `unknown` for lack of structure -- only for lack of *data*, and
+all four fields are universal (1000/1000), so there's no lack-of-data case
+either. A fifth criterion (total cholesterol<=240, ~189/1000 coverage) was
+tried specifically to demonstrate the honest-unknown ("flag, don't guess")
+behavior as suggested, but was dropped from the hero trial after testing:
+with only ~19% coverage, it capped 78% of patients at `needs more data`
+rather than being a minor contrast note, directly conflicting with the
+"mostly eligible" goal. Noted here, not silently discarded -- can be added
+back (or tested standalone) if the honest-unknown demonstration is wanted
+for a different part of the demo.
+- Since this trial has no ClinicalTrials.gov record, `GET /trials/{nct_id}`
+  needed a small additive fallback (`main.py`): try the live
+  ClinicalTrials.gov lookup exactly as before; only on a 404 does it fall
+  back to reading the trial's own `trials` table row. Every real NCT ID
+  still resolves via the live API exactly as before (never reaches the
+  fallback branch) -- verified NCT04280705 still returns 200 via the live
+  path after this change.
+
+**Part 3 -- match results.** 100 patients evaluated (coarse filter matched
+all 1000, since eGFR/age aren't narrowed by the current coarse-filter
+fields): **94 eligible, 6 ineligible, 0 unknown.** Sample eligible patient
+(00796351): age 69 pass, eGFR 108.335 pass (cites `lab_result_id` 2882),
+HbA1c 4.9885 pass, ALT 18.0092 pass -- overall `eligible`. Sample ineligible
+patient (003be4ad): eGFR 24.7894 real **fail** against the >=30 threshold
+(cites `lab_result_id` 2358), everything else passes -- overall
+`ineligible`. Every verdict is a real comparison against a real patient
+value with a real citation; nothing fabricated.
+
+**Part 4 -- regression.** `/health`, `/patients`, `/consent.html`,
+`/researcher.html`, `/audit-log`, `/flagged-for-review` all still 200;
+NCT04280705's candidate screen byte-identical to before (1 pass/1 fail/11
+unknown pattern unchanged); both existing hero trials (NCT07348718,
+NCT04791358) still match successfully. Every prior trial kept, none
+deleted. Only code change: the additive `get_trial` fallback in `main.py`.
+
 ## Demo narrative (what to show judges)
 1. Paste a real trial's messy eligibility text → watch it become clean rules.
 2. Show a ranked list of patients for that trial.

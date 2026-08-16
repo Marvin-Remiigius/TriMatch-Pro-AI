@@ -55,7 +55,30 @@ def health():
 
 @app.get("/trials/{nct_id}")
 async def get_trial(nct_id: str):
-    return await fetch_trial(nct_id)
+    """Fetches live trial metadata from ClinicalTrials.gov, exactly as
+    before, for any real NCT ID. Additive fallback: only when that lookup
+    404s do we check our own `trials` table -- this lets a locally-defined
+    trial (no ClinicalTrials.gov record) still be loaded through the same
+    dashboard/API surface as real trials, without changing behavior for
+    any trial that IS on ClinicalTrials.gov."""
+    try:
+        return await fetch_trial(nct_id)
+    except HTTPException as exc:
+        if exc.status_code != 404:
+            raise
+        client = get_client()
+        res = client.table("trials").select("*").eq("nct_id", nct_id).limit(1).execute()
+        if not res.data:
+            raise
+        row = res.data[0]
+        return {
+            "nct_id": row["nct_id"],
+            "title": row.get("title"),
+            "phase": row.get("phase"),
+            "overall_status": row.get("status"),
+            "primary_endpoint": row.get("primary_endpoint"),
+            "eligibility_criteria": None,
+        }
 
 
 @app.post("/trials/{nct_id}/import", response_model=ImportTrialResponse)
