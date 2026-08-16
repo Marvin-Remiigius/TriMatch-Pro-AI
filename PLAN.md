@@ -584,6 +584,108 @@ this once match results are actually being written to `match_results`
 
 ---
 
+## Compound-criteria decomposition (2026-08-16) — DONE
+
+Standalone, additive change on top of Phase 1 + Phase 2's parser and
+matcher, done as its own commit per explicit instruction so it reverts
+cleanly. Motivating problem: many real criteria bundle an independent,
+easily-checkable condition (an age bound) together with something genuinely
+unstructurable (an OR across sex/pregnancy, or a multi-branch "at least one
+of" list) in one sentence — the old parser could only structure a criterion
+fully or not at all, so the checkable part got thrown away along with the
+unstructurable part.
+
+**No DB schema change.** `trial_criteria` has no column for a rules list.
+A criterion with 0-1 rules is encoded exactly as before (a single scalar in
+the `value` column); a criterion with 2+ rules stores the full rule list as
+JSON in that same column, with `field`/`operator`/`unit` mirroring the
+first rule for backward compat with anything (`coarse_filter.py`) that only
+reads the top-level columns. The matcher detects the shape (`_is_rule_list`)
+and branches accordingly, so old rows and new single-rule rows hit the
+identical code path as before.
+
+- [x] `models.py`: `Rule`, `RuleResult`, `Criterion.rules` (additive,
+  defaults `None`), `CriterionMatch.rule_results` (additive). A
+  `model_validator` mirrors `rules[0]` into the legacy top-level
+  `field`/`operator`/`value`/`unit` whenever they're otherwise unset, so
+  anything still reading those directly keeps working.
+- [x] `matching.py` / `db_matching.py`: `evaluate_criterion` /
+  `evaluate_db_criterion` rewritten around a per-rule evaluator + Kleene-AND
+  combination (`_effective_rules`/`_effective_db_rules` fall back to a
+  single legacy rule ONLY when field+operator+value are all present —
+  matching the old gate exactly). Verdict logic: any known-false sub-rule
+  → the compound condition is false regardless of other unknowns (AND with
+  false is false); else any unknown sub-rule → unknown; else true. Same
+  inclusion/exclusion inversion as before, applied once to the combined
+  result. **Partial-criterion honesty guard**: if `needs_review` is still
+  true because part of the criterion is genuinely unstructurable, a
+  would-be "pass" is downgraded to `unknown` (the checked part alone can't
+  confirm the whole original criterion) — but a genuine "fail" from the
+  checked part is still reported as-is (safe regardless of whether the true
+  relationship to the unstructured remainder is AND or OR, since one
+  confirmed disqualifying condition is always sufficient).
+- [x] `llm.py`: prompt rewritten around a `rules: [...]` array (replacing
+  top-level field/operator/value in the JSON the model emits), with
+  explicit OR-guidance and three worked examples: (1) partial structuring
+  --- age captured, sex/pregnancy OR left unstructured (the exact case from
+  the brief); (2) full multi-rule AND (eGFR + age); (3) a multi-branch "at
+  least one of" OR list staying fully unstructured even though one branch
+  looks simple.
+- [x] `main.py`: `_criterion_to_db_row` helper encodes 0-1-rule criteria
+  identically to before; 2+-rule criteria get the new JSON-list encoding.
+  No other endpoint changed.
+- [x] Verified backward compatibility directly in Python (not just via the
+  API) before touching anything live: old-style single-rule construction
+  vs. new-style 1-element `rules` list produce byte-identical verdict and
+  reason strings, for both inclusion and exclusion criteria, in both
+  `matching.py` and `db_matching.py` (the latter against a real Supabase
+  patient).
+- [x] Verified the new AND/Kleene logic directly: both-true → fail
+  (exclusion triggers), one-false → pass (short-circuits correctly even
+  when the OTHER rule is unknown — a known-false always wins over an
+  unknown), both-unknown-with-one-true → unknown.
+- [x] Verified the partial-downgrade: a criterion with one structured
+  passing sub-rule and a genuinely unstructured remainder → `unknown`, not
+  a false pass; the same criterion with the sub-rule failing → still
+  `fail`, not softened.
+- [x] Live re-parse of `NCT04280705`: the exact "Male or non-pregnant
+  female adult >= 18" criterion now yields a real `age >= 18` sub-rule that
+  evaluates a different real value per patient (confirmed against two real
+  Supabase patients, ages 45 and 71) while staying `needs_review` for the
+  unstructured sex/pregnancy part; "provides informed consent" still
+  resolves to zero rules, fully unstructured — no overreach.
+- [x] **Found and fixed a real issue during this same verification pass**:
+  the first live re-parse pulled a single branch (SpO2 <= 94) out of a
+  4-way "at least one of" OR-list as if it were an independent rule — a
+  patient failing that one branch could still satisfy the criterion via
+  another branch never checked, so reporting "fail" there would have been
+  wrong (unlike the AND case, a single false OR-branch doesn't determine
+  the outcome). Added explicit prompt guidance + a third worked example;
+  re-verified the fix removes the single-branch extraction (that criterion
+  now correctly resolves to zero rules) without touching the criteria that
+  were already correct.
+- [x] Confirmed the dashboard needed **zero code changes** — existing
+  `verdict`/`patient_value`/`reason` fields already carry a sensible
+  summary for multi-rule and partial criteria (verified live in a real
+  browser: the partial-criterion reason text and patient value render
+  correctly with no layout breakage).
+- [x] Full regression pass on every endpoint (Phase 1 and Phase 2
+  dashboards, `/candidates`, `/progress`, `/enrollment`, `/audit`,
+  `/audit-log`, `/flagged-for-review`) after the change — all 200.
+- Known, pre-existing, unrelated observation: Gemini's free-tier daily
+  quota (20 requests/day for `gemini-2.5-flash`) was exhausted mid-session
+  purely from cumulative testing across this whole project — the existing
+  "LLM call failed" fallback (from step 3) degraded safely both times
+  rather than crashing, which is itself a confirmation that fallback path
+  still works correctly under the new schema. Not something this change
+  caused or can fix; a new key resolved it.
+- Known limitation, not addressed here: `trial_criteria` still has no
+  `reason` column (same pre-existing gap noted under step 3), so a
+  criterion's needs_review explanation lives in the live API response but
+  isn't persisted to the DB for multi-rule criteria either.
+
+---
+
 ## Demo narrative (what to show judges)
 1. Paste a real trial's messy eligibility text → watch it become clean rules.
 2. Show a ranked list of patients for that trial.
@@ -593,6 +695,11 @@ this once match results are actually being written to `match_results`
 5. (Phase 2) Point at `match_results.source_lab_result_id` and explain: every
    verdict cites the exact lab row that justified it, not just a reason
    string — that's source data verification, not just an audit note.
+6. Show `NCT04280705`'s "Male or non-pregnant female adult >= 18" criterion:
+   the age part is a real, evaluated rule (different verdict per patient);
+   the sex/pregnancy OR part stays honestly flagged instead of guessed or
+   thrown away entirely — this is the "partial credit, never overreach"
+   story in one criterion.
 
 ## Guardrails / notes to self
 - Commit after every working step.

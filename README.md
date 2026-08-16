@@ -87,7 +87,12 @@ requirements, and what's built so far vs. still open.
   in the response so you can see what's about to be parsed
 - `POST /trials/{nct_id}/parse-criteria` — parses the trial's eligibility
   text with the same Gemini parser as `/parse-criteria` below, and replaces
-  (delete-then-insert) that trial's `trial_criteria` rows in Supabase
+  (delete-then-insert) that trial's `trial_criteria` rows in Supabase. A
+  criterion can decompose into multiple AND'ed sub-rules (e.g. "Male or
+  non-pregnant female >= 18" yields a real, evaluated `age >= 18` rule
+  while the unstructurable sex/pregnancy part stays honestly flagged
+  instead of being thrown away) -- see `PLAN.md`'s "Compound-criteria
+  decomposition" entry for the full design
 - `POST /trials/{nct_id}/match/{patient_id}` — deterministically matches
   one real Supabase patient against the trial's parsed criteria, writes
   `match_results` (citing the exact `lab_results` row behind any lab-based

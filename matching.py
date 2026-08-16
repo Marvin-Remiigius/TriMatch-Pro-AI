@@ -1,4 +1,4 @@
-from models import Criterion, CriterionMatch, Patient
+from models import Criterion, CriterionMatch, Patient, Rule, RuleResult
 
 _OP_ALIASES = {
     "=": "==",
@@ -105,8 +105,69 @@ def _evaluate_condition(patient_value, operator: str, criterion_value):
     return None, f"unsupported operator '{operator}'"
 
 
+def _evaluate_single_rule(patient: Patient, rule: Rule) -> dict:
+    """Evaluates one sub-rule against a patient. Returns a dict with
+    status ('known'|'unknown'), condition_true (bool|None), patient_value,
+    and reason -- the same per-field logic the single-rule matcher always
+    used, just parametrized on a Rule instead of a Criterion."""
+    if not rule.field or not rule.operator or rule.value is None:
+        return {
+            "status": "unknown",
+            "condition_true": None,
+            "patient_value": None,
+            "reason": "rule is missing field/operator/value",
+        }
+
+    operator = _normalize_op(rule.operator)
+    patient_value, found = _resolve_field(patient, rule.field)
+
+    if not found:
+        return {
+            "status": "unknown",
+            "condition_true": None,
+            "patient_value": None,
+            "reason": f"Patient has no data for '{rule.field}'.",
+        }
+
+    condition_true, error = _evaluate_condition(patient_value, operator, rule.value)
+    if error:
+        return {
+            "status": "unknown",
+            "condition_true": None,
+            "patient_value": patient_value,
+            "reason": error,
+        }
+
+    reason = (
+        f"{rule.field} = {patient_value!r} "
+        f"{'meets' if condition_true else 'does not meet'} "
+        f"'{rule.operator} {rule.value}'"
+    )
+    return {
+        "status": "known",
+        "condition_true": condition_true,
+        "patient_value": patient_value,
+        "reason": reason,
+    }
+
+
+def _effective_rules(criterion: Criterion) -> list[Rule]:
+    """Returns criterion.rules if present; otherwise synthesizes a single
+    legacy rule from the top-level field/operator/value -- ONLY when all
+    three are present, matching the old gate exactly so criteria parsed
+    before this change (or by anything not yet emitting `rules`) evaluate
+    identically to before."""
+    if criterion.rules:
+        return criterion.rules
+    if criterion.field and criterion.operator and criterion.value is not None:
+        return [Rule(field=criterion.field, operator=criterion.operator, value=criterion.value, unit=criterion.unit)]
+    return []
+
+
 def evaluate_criterion(criterion: Criterion, patient: Patient) -> CriterionMatch:
-    if criterion.needs_review:
+    rules = _effective_rules(criterion)
+
+    if criterion.needs_review and not rules:
         return CriterionMatch(
             id=criterion.id,
             type=criterion.type,
@@ -116,7 +177,7 @@ def evaluate_criterion(criterion: Criterion, patient: Patient) -> CriterionMatch
             reason=criterion.reason or "Criterion could not be structured; needs human review.",
         )
 
-    if not criterion.field or not criterion.operator or criterion.value is None:
+    if not rules:
         return CriterionMatch(
             id=criterion.id,
             type=criterion.type,
@@ -126,44 +187,70 @@ def evaluate_criterion(criterion: Criterion, patient: Patient) -> CriterionMatch
             reason="Criterion is missing field/operator/value.",
         )
 
-    operator = _normalize_op(criterion.operator)
-    patient_value, found = _resolve_field(patient, criterion.field)
+    evaluations = [_evaluate_single_rule(patient, r) for r in rules]
 
-    if not found:
-        return CriterionMatch(
-            id=criterion.id,
-            type=criterion.type,
-            text=criterion.text,
-            field=criterion.field,
-            verdict="unknown",
-            reason=f"Patient has no data for '{criterion.field}'.",
-        )
-
-    condition_true, error = _evaluate_condition(patient_value, operator, criterion.value)
-    if error:
-        return CriterionMatch(
-            id=criterion.id,
-            type=criterion.type,
-            text=criterion.text,
-            field=criterion.field,
-            verdict="unknown",
-            patient_value=patient_value,
-            reason=error,
-        )
-
-    # Inclusion: condition true means the patient meets the requirement (pass).
-    # Exclusion: condition true means the disqualifying condition is present,
-    # which blocks the patient (fail) -- so the sense is inverted.
-    if criterion.type == "inclusion":
-        verdict = "pass" if condition_true else "fail"
+    # Kleene AND across sub-rules: a known-false rule makes the whole
+    # compound condition false regardless of any unknowns (False AND
+    # anything is False); otherwise any unknown rule makes the combined
+    # result unknown; only when every rule is known-true is it true.
+    if any(e["status"] == "known" and e["condition_true"] is False for e in evaluations):
+        combined_true = False
+    elif any(e["status"] == "unknown" for e in evaluations):
+        combined_true = None
     else:
-        verdict = "fail" if condition_true else "pass"
+        combined_true = True
 
-    reason = (
-        f"{criterion.field} = {patient_value!r} "
-        f"{'meets' if condition_true else 'does not meet'} "
-        f"'{criterion.operator} {criterion.value}'"
-    )
+    # Inclusion: combined condition true means the patient meets the
+    # requirement (pass). Exclusion: combined condition true means the
+    # disqualifying condition is present, which blocks the patient (fail)
+    # -- so the sense is inverted. Same rule as before, applied once to
+    # the combined result rather than per-rule.
+    if combined_true is None:
+        verdict = "unknown"
+    elif criterion.type == "inclusion":
+        verdict = "pass" if combined_true else "fail"
+    else:
+        verdict = "fail" if combined_true else "pass"
+
+    # Honesty guard for partially-structured criteria: needs_review can now
+    # stay true even when some rules were extracted (a genuinely
+    # unstructurable remainder exists). A "fail" from the checked part is
+    # still valid (AND with anything false is false), but a "pass" only
+    # confirms the checked part, not the whole original criterion -- don't
+    # let that read as a full pass.
+    partial_note = None
+    if criterion.needs_review and rules and verdict == "pass":
+        verdict = "unknown"
+        partial_note = (
+            "this criterion is only partially structured "
+            f"({criterion.reason or 'part could not be reliably parsed'}); "
+            "full compliance not confirmed"
+        )
+
+    if len(rules) == 1:
+        reason = evaluations[0]["reason"]
+        patient_value = evaluations[0]["patient_value"]
+    else:
+        reason = "; ".join(e["reason"] for e in evaluations)
+        patient_value = [e["patient_value"] for e in evaluations]
+
+    if partial_note:
+        reason = f"{reason} — {partial_note}"
+
+    rule_results = None
+    if criterion.rules:
+        rule_results = [
+            RuleResult(
+                field=r.field,
+                operator=r.operator,
+                value=r.value,
+                patient_value=e["patient_value"],
+                condition_met=e["condition_true"],
+                reason=e["reason"],
+            )
+            for r, e in zip(rules, evaluations)
+        ]
+
     return CriterionMatch(
         id=criterion.id,
         type=criterion.type,
@@ -172,6 +259,7 @@ def evaluate_criterion(criterion: Criterion, patient: Patient) -> CriterionMatch
         verdict=verdict,
         patient_value=patient_value,
         reason=reason,
+        rule_results=rule_results,
     )
 
 

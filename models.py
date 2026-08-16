@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Literal, Optional, Union
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 
 class Diagnosis(BaseModel):
@@ -36,6 +36,13 @@ class Patient(BaseModel):
     vitals: Vitals = Vitals()
 
 
+class Rule(BaseModel):
+    field: Optional[str] = None
+    operator: Optional[str] = None
+    value: Optional[Union[float, str, bool, list]] = None
+    unit: Optional[str] = None
+
+
 class Criterion(BaseModel):
     id: str
     type: Literal["inclusion", "exclusion"]
@@ -44,8 +51,26 @@ class Criterion(BaseModel):
     operator: Optional[str] = None
     value: Optional[Union[float, str, bool, list]] = None
     unit: Optional[str] = None
+    # New, additive: a criterion may decompose into several AND'd sub-rules.
+    # When absent/empty, callers fall back to the single field/operator/value
+    # above -- existing single-rule behavior is completely unchanged.
+    rules: Optional[list[Rule]] = None
     needs_review: bool = False
     reason: Optional[str] = None
+
+    @model_validator(mode="after")
+    def _mirror_first_rule(self):
+        # Keeps the legacy top-level field/operator/value/unit populated
+        # (from rules[0]) for anything still reading them directly, so
+        # criteria parsed under the new rules-only schema stay fully
+        # backward compatible with old consumers.
+        if self.rules and self.field is None and self.operator is None and self.value is None:
+            first = self.rules[0]
+            self.field = first.field
+            self.operator = first.operator
+            self.value = first.value
+            self.unit = first.unit
+        return self
 
 
 class ParseCriteriaRequest(BaseModel):
@@ -54,6 +79,16 @@ class ParseCriteriaRequest(BaseModel):
 
 class ParseCriteriaResponse(BaseModel):
     criteria: list[Criterion]
+
+
+class RuleResult(BaseModel):
+    field: Optional[str] = None
+    operator: Optional[str] = None
+    value: Optional[Union[float, str, bool, list]] = None
+    patient_value: Optional[Union[float, str, bool, list]] = None
+    condition_met: Optional[bool] = None  # None = unknown (missing data)
+    source_lab_result_id: Optional[int] = None
+    reason: str
 
 
 class CriterionMatch(BaseModel):
@@ -65,6 +100,10 @@ class CriterionMatch(BaseModel):
     patient_value: Optional[Union[float, str, bool, list]] = None
     source_lab_result_id: Optional[int] = None
     reason: str
+    # New, additive: per-sub-rule breakdown when the criterion decomposed
+    # into multiple rules. None/absent for existing single-rule criteria --
+    # the fields above still carry a sensible summary either way.
+    rule_results: Optional[list[RuleResult]] = None
 
 
 class MatchRequest(BaseModel):

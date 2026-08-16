@@ -25,6 +25,7 @@ from models import (
     AuditLogRow,
     Candidate,
     CandidateListResponse,
+    Criterion,
     DBCandidateListResponse,
     DBCandidateSummary,
     EnrollmentRecord,
@@ -70,6 +71,51 @@ async def import_trial(nct_id: str):
     )
 
 
+def _criterion_to_db_row(nct_id: str, c: Criterion) -> dict:
+    """Shapes a parsed Criterion into a trial_criteria row. No DB schema
+    change: a criterion with 0-1 rules is encoded exactly as before
+    (single scalar in `value`); a criterion with 2+ rules stores the full
+    rule list as JSON in that same `value` column (field/operator/unit
+    mirror the first rule, for backward compat with anything -- e.g.
+    coarse_filter.py -- that only reads the top-level columns)."""
+    if c.rules and len(c.rules) > 1:
+        first = c.rules[0]
+        return {
+            "nct_id": nct_id,
+            "type": c.type,
+            "raw_text": c.text,
+            "field": first.field,
+            "operator": first.operator,
+            "value": json.dumps([r.model_dump() for r in c.rules]),
+            "unit": first.unit,
+            "needs_review": c.needs_review,
+        }
+
+    if c.rules and len(c.rules) == 1:
+        r = c.rules[0]
+        return {
+            "nct_id": nct_id,
+            "type": c.type,
+            "raw_text": c.text,
+            "field": r.field,
+            "operator": r.operator,
+            "value": json.dumps(r.value) if r.value is not None else None,
+            "unit": r.unit,
+            "needs_review": c.needs_review,
+        }
+
+    return {
+        "nct_id": nct_id,
+        "type": c.type,
+        "raw_text": c.text,
+        "field": c.field,
+        "operator": c.operator,
+        "value": json.dumps(c.value) if c.value is not None else None,
+        "unit": c.unit,
+        "needs_review": c.needs_review,
+    }
+
+
 @app.post("/trials/{nct_id}/parse-criteria", response_model=ParseCriteriaToDBResponse)
 async def parse_trial_criteria(nct_id: str):
     trial = await fetch_trial(nct_id)
@@ -86,19 +132,7 @@ async def parse_trial_criteria(nct_id: str):
 
     client.table("trial_criteria").delete().eq("nct_id", nct_id).execute()
 
-    rows = [
-        {
-            "nct_id": nct_id,
-            "type": c.type,
-            "raw_text": c.text,
-            "field": c.field,
-            "operator": c.operator,
-            "value": json.dumps(c.value) if c.value is not None else None,
-            "unit": c.unit,
-            "needs_review": c.needs_review,
-        }
-        for c in criteria
-    ]
+    rows = [_criterion_to_db_row(nct_id, c) for c in criteria]
     inserted = client.table("trial_criteria").insert(rows).execute()
 
     return ParseCriteriaToDBResponse(
