@@ -168,6 +168,13 @@ def list_enrollment(client, nct_id: str) -> list[dict]:
     return client.table("patient_trial").select("*").eq("nct_id", nct_id).execute().data
 
 
+def list_patient_enrollment(client, patient_id: str) -> list[dict]:
+    """Same patient_trial table as list_enrollment, filtered by patient
+    instead of trial -- every invitation/enrollment record for one patient,
+    across all trials. Read-only; powers the patient portal home."""
+    return client.table("patient_trial").select("*").eq("patient_id", patient_id).execute().data
+
+
 def list_trial_audit(client, nct_id: str, limit: int = 200) -> list[dict]:
     return (
         client.table("audit_log")

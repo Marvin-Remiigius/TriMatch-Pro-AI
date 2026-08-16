@@ -50,19 +50,24 @@ requirements, and what's built so far vs. still open.
 
 ## Dashboards
 
-- `http://127.0.0.1:8000/` (`static/index.html`) — Phase 1 fallback demo,
-  in-memory 5-patient store. Enter an NCT id (e.g. `NCT04280705`) and click
-  "Load candidates".
+- `http://127.0.0.1:8000/` (`static/index.html`) — landing page with two
+  entry points: Researcher Portal and Patient Portal. Presentation/routing
+  framing only (no real authentication) — a sign-in screen accepts any
+  name and stores it in `sessionStorage` for the header badge, then routes
+  into the existing dashboard/consent pages below.
+- `http://127.0.0.1:8000/phase1-dashboard.html` — Phase 1 fallback demo,
+  in-memory 5-patient store (this used to be at `/` — moved here when the
+  landing page took over that URL, content unchanged). Enter an NCT id
+  (e.g. `NCT04280705`) and click "Load candidates".
 - `http://127.0.0.1:8000/researcher.html` — Phase 2 researcher dashboard,
   live against the real Supabase data (1000 patients). Enter an NCT id and
   click "Load trial"; click a ranked candidate to see its full per-criterion
   breakdown, including the source `lab_result` citation behind every
-  lab-based verdict. The Candidates and Enrollment tabs cap matching at 30
-  patients per load (`limit=30&max_evaluate=30` in the dashboard's fetch
-  calls) so any trial loads in ~15-20s regardless of how well the coarse
-  filter narrows it — raise this in `static/researcher.html` if you want a
-  fuller sweep at the cost of a slower load (see `PLAN.md` step 5 for why
-  the coarse filter alone doesn't bound load time).
+  lab-based verdict. The Candidates and Enrollment tabs default to
+  matching 30 patients per load, entered in the "Patients" field next to
+  the NCT id (1-1000) — a smaller number loads faster, a larger one gives
+  a fuller sweep (see `PLAN.md` step 5 for why the coarse filter alone
+  doesn't bound load time).
 
   The **Trial progress** tab shows enrolled/active/
   dropout counts, a transparently-defined `success_rate`, and a
@@ -72,9 +77,14 @@ requirements, and what's built so far vs. still open.
   demo progress there too). The **Enrollment** tab is the real invite ->
   consent -> enroll pipeline: each ranked candidate shows its current
   status and the one next action available, plus the trial's audit trail
-  rendered live on the same screen. "Invite" opens
-  `/consent.html?patient=...&trial=...` in a new tab — the one
-  patient-facing screen (Accept/Decline; no login, no portal).
+  rendered live on the same screen. For an invited patient, "Open consent
+  screen" opens `/consent.html?patient=...&trial=...` in a new tab — the
+  standalone patient-facing screen (Accept/Decline, step indicator,
+  withdraw, own progress once enrolled).
+- `http://127.0.0.1:8000/patient-home.html` — patient portal home
+  (reached via the landing page's Patient Portal sign-in). Looks up every
+  `patient_trial` row for the signed-in patient ID across all trials and
+  links each one into the same `/consent.html` screen above.
 
 ## Endpoints
 

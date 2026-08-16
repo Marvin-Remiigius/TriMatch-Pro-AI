@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>TriMatch Pro AI — Researcher Sign In</title>
+<style>
+  :root {
+    --bg: #0C0D0F;
+    --panel: #141619;
+    --panel-2: #1A1D21;
+    --text: #E6E7E9;
+    --muted: #8A8F98;
+    --muted-2: #5D6169;
+    --line: #22252A;
+    --accent: #5B8DB8;
+    --accent-dim: rgba(91, 141, 184, 0.14);
+    --radius: 3px;
+    --font-ui: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+    --ease: 140ms ease;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 14px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    display: flex;
+    justify-content: center;
+    padding: 3rem 1.25rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .card { width: 100%; max-width: 400px; }
+
+  .back-link {
+    display: inline-block;
+    color: var(--muted-2);
+    text-decoration: none;
+    font-size: 12.5px;
+    margin-bottom: 1.75rem;
+  }
+  .back-link:hover { color: var(--muted); }
+
+  .badge-row { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem; }
+
+  .portal-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: var(--radius);
+    background: var(--accent-dim);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  h1 { font-size: 18px; font-weight: 600; margin: 0; }
+
+  .sub {
+    color: var(--muted);
+    font-size: 13px;
+    margin: 0.4rem 0 2rem;
+  }
+
+  label {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted-2);
+    margin-bottom: 0.4rem;
+  }
+
+  .field { margin-bottom: 1.1rem; }
+
+  input[type="text"] {
+    width: 100%;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 0.65rem 0.75rem;
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 14px;
+  }
+
+  input[type="text"]::placeholder { color: var(--muted-2); }
+  input[type="text"]:focus-visible { border-color: var(--accent); }
+
+  .btn-primary {
+    width: 100%;
+    background: var(--accent-dim);
+    color: var(--accent);
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    padding: 0.75rem 1rem;
+    font-size: 14px;
+    cursor: pointer;
+    margin-top: 0.5rem;
+    transition: background var(--ease);
+  }
+  .btn-primary:hover { background: rgba(91, 141, 184, 0.24); }
+
+  .footnote {
+    color: var(--muted-2);
+    font-size: 11px;
+    margin-top: 1.75rem;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <a class="back-link" href="index.html">&larr; Back</a>
+
+  <div class="badge-row">
+    <div class="portal-icon">R</div>
+    <h1>Researcher sign in</h1>
+  </div>
+  <p class="sub">Enter your name to continue to the research dashboard.</p>
+
+  <form id="loginForm">
+    <div class="field">
+      <label for="nameInput">Name</label>
+      <input type="text" id="nameInput" placeholder="e.g. Dr. Priya Anand" autocomplete="name" required />
+    </div>
+    <div class="field">
+      <label for="orgInput">Organization <span style="text-transform:none; letter-spacing:0;">(optional)</span></label>
+      <input type="text" id="orgInput" placeholder="e.g. Northview Research Institute" autocomplete="organization" />
+    </div>
+    <button type="submit" class="btn-primary">Continue to dashboard</button>
+  </form>
+
+  <div class="footnote">Demo sign-in — any name is accepted, nothing is stored beyond this browser session.</div>
+</div>
+
+<script>
+  document.getElementById('loginForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = document.getElementById('nameInput').value.trim() || 'Researcher';
+    const org = document.getElementById('orgInput').value.trim();
+    sessionStorage.setItem('tm_researcher_name', name);
+    sessionStorage.setItem('tm_researcher_org', org);
+    window.location.href = 'researcher.html';
+  });
+</script>
+
+</body>
+</html>

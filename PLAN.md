@@ -1018,6 +1018,68 @@ endpoints/functions -- no code changes.
   `lab_results`, `audit_log`), same category as the hero-trial criteria
   import earlier. Logged here for the record, same as that was.
 
+## Two-portal entry/login framing (2026-08-17) — DONE
+
+Presentation/routing layer only -- no real authentication, no users
+table, no sessions/JWT. A landing page plus lightweight sign-in screens
+that route into the existing dashboard and consent pages, so the app
+reads as one product with two portals instead of a set of loose pages.
+
+- **`static/index.html` (new front door)**: two cards, "Researcher
+  Portal" and "Patient Portal", linking to their respective sign-in
+  pages. Same dark palette/tokens as every other screen.
+- **`static/researcher-login.html` / `static/patient-login.html`
+  (new)**: name field (+ optional org for researcher; + a required
+  Patient ID for patient, since that's the real lookup key into
+  `patient_trial` -- there's no other identity system to key off of).
+  Accepts any input, stores it in `sessionStorage`, routes into the
+  existing `researcher.html` / new `patient-home.html`. No backend call,
+  no validation beyond "non-empty" -- exactly the demo-gate behavior
+  asked for.
+- **`static/patient-home.html` (new patient portal home)**: reads the
+  patient ID from `sessionStorage`, calls the new `GET
+  /patients/{patient_id}/enrollment` endpoint, and lists every real
+  invitation/enrollment across all trials with a link into the
+  **existing, unmodified** `/consent.html` flow. Empty/unknown IDs get
+  an honest "no invitations found" message rather than a fabricated
+  list.
+- **New backend endpoint**: `GET /patients/{patient_id}/enrollment`
+  (`main.py` + `enrollment.list_patient_enrollment`) -- the same
+  `patient_trial` table `list_enrollment` already reads, just filtered
+  by patient instead of by trial. Read-only, additive, no schema change.
+- **Shared shell on `researcher.html`**: a `.session-bar` inserted
+  immediately before the existing `<header>` (never modifying it) shows
+  a Researcher badge, the signed-in name/org from `sessionStorage`, and
+  a Sign-out button. Direct navigation to `researcher.html` without
+  going through login still works exactly as before -- the bar just
+  shows "Guest researcher" as a graceful default, since nothing gates
+  access.
+- **`consent.html` deliberately untouched** -- reused exactly as built
+  in the earlier standalone-consent-screen work, per this task's own
+  instruction not to rebuild it.
+- **Found and fixed a real mistake while building this**: writing the
+  new `static/index.html` silently overwrote a *pre-existing* file --
+  the Phase 1 fallback dashboard from "Step 6: frontend dashboard",
+  which `README.md` documented as living at `/`. Caught it via `git
+  status` showing `M` instead of `??`. Fixed by restoring its exact
+  content (`git show HEAD:static/index.html`) to a new file,
+  `static/phase1-dashboard.html` -- verified byte-identical via `diff`,
+  confirmed it has no self-referencing paths that would break from the
+  rename, and confirmed it still loads and renders correctly at its new
+  URL. Updated `README.md`'s Dashboards section (which had also gone
+  stale in two other spots -- the old hardcoded 30-patient cap and an
+  outdated "no login, no portal" line) to match current reality. Nothing
+  was lost; the Phase 1 fallback is fully intact, just relocated.
+- Full regression pass: `/health`, `/patients`, existing trial candidate
+  matching (byte-identical verdicts), `/trials/*/progress`,
+  `/trials/*/enrollment`, `/trials/*/audit`, `/audit-log`,
+  `/flagged-for-review`, `consent.html`, `researcher.html` all still
+  200. Verified live in browser: full researcher login -> dashboard
+  (existing tabs load and match correctly) -> sign out -> landing;
+  full patient login -> patient home (real invitations for a real
+  patient ID, across two different trials) -> existing consent page
+  loads with its full enrolled-patient progress view intact.
+
 ## Demo narrative (what to show judges)
 1. Paste a real trial's messy eligibility text → watch it become clean rules.
 2. Show a ranked list of patients for that trial.

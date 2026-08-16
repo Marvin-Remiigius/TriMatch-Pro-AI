@@ -15,6 +15,7 @@ from enrollment import (
     enroll_patient,
     invite_patient,
     list_enrollment,
+    list_patient_enrollment,
     list_trial_audit,
     withdraw_patient,
 )
@@ -334,6 +335,15 @@ def decline(nct_id: str, patient_id: str):
 def get_enrollment(nct_id: str):
     client = get_client()
     return list_enrollment(client, nct_id)
+
+
+@app.get("/patients/{patient_id}/enrollment", response_model=list[EnrollmentRecord])
+def get_patient_enrollment(patient_id: str):
+    """Every invitation/enrollment record for one patient, across all
+    trials -- the reverse of GET /trials/{nct_id}/enrollment. Read-only,
+    same patient_trial table. Powers the patient portal home."""
+    client = get_client()
+    return list_patient_enrollment(client, patient_id)
 
 
 @app.get("/trials/{nct_id}/audit", response_model=list[AuditLogRow])

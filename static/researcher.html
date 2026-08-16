@@ -68,6 +68,44 @@
 
   .mono { font-family: var(--font-mono); }
 
+  /* ---------- Session bar (shared shell) ---------- */
+
+  .session-bar {
+    border-bottom: 1px solid var(--line);
+    padding: 0.6rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .session-left { display: flex; align-items: center; gap: 0.6rem; }
+
+  .role-badge {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.5rem;
+    border-radius: var(--radius);
+  }
+  .role-badge.role-researcher { background: var(--accent-dim); color: var(--accent); }
+
+  .session-name { color: var(--muted); font-size: 13px; }
+
+  .signout-btn {
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 0.4rem 0.8rem;
+    color: var(--muted);
+    font-size: 12.5px;
+    cursor: pointer;
+    transition: border-color var(--ease), color var(--ease);
+  }
+  .signout-btn:hover { border-color: var(--muted-2); color: var(--text); }
+
   /* ---------- Header ---------- */
 
   header {
@@ -706,6 +744,14 @@
 </head>
 <body>
 
+<div class="session-bar">
+  <div class="session-left">
+    <span class="role-badge role-researcher">Researcher</span>
+    <span class="session-name" id="sessionName">Guest researcher</span>
+  </div>
+  <button class="signout-btn" id="signoutBtn">Sign out</button>
+</div>
+
 <header>
   <div class="brand">TriMatch <span class="dim">Researcher</span></div>
   <div class="load-row">
@@ -764,6 +810,20 @@
 </div>
 
 <script>
+  (function initSession() {
+    const name = sessionStorage.getItem('tm_researcher_name');
+    const org = sessionStorage.getItem('tm_researcher_org');
+    const sessionNameEl = document.getElementById('sessionName');
+    if (name) {
+      sessionNameEl.textContent = org ? `${name} · ${org}` : name;
+    }
+    document.getElementById('signoutBtn').addEventListener('click', () => {
+      sessionStorage.removeItem('tm_researcher_name');
+      sessionStorage.removeItem('tm_researcher_org');
+      window.location.href = 'index.html';
+    });
+  })();
+
   const nctInput = document.getElementById('nctInput');
   const patientCountInput = document.getElementById('patientCountInput');
   const loadBtn = document.getElementById('loadBtn');

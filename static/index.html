@@ -2,248 +2,191 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>TriMatch Pro AI</title>
 <style>
   :root {
-    --bg: #0f1115;
-    --panel: #171a21;
-    --panel-border: #2a2e38;
-    --text: #e6e8ec;
-    --muted: #9198a8;
-    --accent: #4f8cff;
-    --green: #2fbf71;
-    --amber: #e6b800;
-    --red: #e5484d;
-    --gray: #565d6d;
+    --bg: #0C0D0F;
+    --panel: #141619;
+    --panel-2: #1A1D21;
+    --text: #E6E7E9;
+    --muted: #8A8F98;
+    --muted-2: #5D6169;
+    --line: #22252A;
+    --accent: #5B8DB8;
+    --accent-dim: rgba(91, 141, 184, 0.14);
+    --pass: #7BA786;
+    --pass-dim: rgba(123, 167, 134, 0.14);
+    --fail: #C06A5F;
+    --fail-dim: rgba(192, 106, 95, 0.14);
+    --unknown: #BCA274;
+    --unknown-dim: rgba(188, 162, 116, 0.14);
+    --radius: 3px;
+    --font-ui: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+    --ease: 140ms ease;
   }
+
   * { box-sizing: border-box; }
+
+  html, body { height: 100%; }
+
   body {
     margin: 0;
-    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     background: var(--bg);
     color: var(--text);
-    padding: 2rem 1.5rem 4rem;
-  }
-  header {
-    max-width: 900px;
-    margin: 0 auto 1.5rem;
-  }
-  h1 {
-    font-size: 1.4rem;
-    margin: 0 0 0.25rem;
-  }
-  .subtitle {
-    color: var(--muted);
-    font-size: 0.9rem;
-    margin: 0 0 1.25rem;
-  }
-  .search-row {
+    font-family: var(--font-ui);
+    font-size: 14px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
     display: flex;
-    gap: 0.5rem;
-    max-width: 900px;
-    margin: 0 auto 1rem;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1.25rem;
   }
-  input[type="text"] {
-    flex: 1;
-    padding: 0.6rem 0.8rem;
-    border-radius: 8px;
-    border: 1px solid var(--panel-border);
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .wrap {
+    width: 100%;
+    max-width: 760px;
+    text-align: center;
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted-2);
+    margin-bottom: 1rem;
+  }
+
+  h1 {
+    font-size: 30px;
+    font-weight: 600;
+    margin: 0 0 0.6rem;
+    letter-spacing: -0.01em;
+  }
+
+  h1 .dim { color: var(--muted); font-weight: 400; }
+
+  .tagline {
+    color: var(--muted);
+    font-size: 15px;
+    margin: 0 0 3rem;
+  }
+
+  .portals {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.1rem;
+    text-align: left;
+  }
+
+  @media (max-width: 640px) {
+    .portals { grid-template-columns: 1fr; }
+  }
+
+  .portal-card {
     background: var(--panel);
-    color: var(--text);
-    font-size: 0.95rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 1.6rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color var(--ease), background var(--ease), transform var(--ease);
   }
-  input[type="text"]:focus { outline: 2px solid var(--accent); }
-  button {
-    padding: 0.6rem 1.1rem;
-    border-radius: 8px;
-    border: none;
-    background: var(--accent);
-    color: white;
-    font-size: 0.95rem;
-    cursor: pointer;
+
+  .portal-card:hover {
+    border-color: var(--muted-2);
+    background: var(--panel-2);
   }
-  button:disabled { opacity: 0.5; cursor: default; }
-  main { max-width: 900px; margin: 0 auto; }
-  .status { color: var(--muted); font-size: 0.9rem; margin: 1rem 0; }
-  .error {
-    background: #2a1416;
-    border: 1px solid var(--red);
-    color: #ff9b9e;
-    padding: 0.75rem 1rem;
-    border-radius: 8px;
-    margin: 1rem 0;
+
+  .portal-card:focus-visible {
+    border-color: var(--accent);
   }
-  .trial-header {
-    background: var(--panel);
-    border: 1px solid var(--panel-border);
-    border-radius: 10px;
-    padding: 1rem 1.25rem;
-    margin-bottom: 1.5rem;
-  }
-  .trial-header h2 { margin: 0 0 0.35rem; font-size: 1.1rem; }
-  .trial-meta { color: var(--muted); font-size: 0.85rem; }
-  .candidate {
-    background: var(--panel);
-    border: 1px solid var(--panel-border);
-    border-radius: 10px;
-    margin-bottom: 0.75rem;
-    overflow: hidden;
-  }
-  .candidate-summary {
+
+  .portal-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius);
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 0.85rem 1.1rem;
-    cursor: pointer;
-    gap: 1rem;
-  }
-  .candidate-summary:hover { background: #1c2028; }
-  .candidate-left { display: flex; align-items: center; gap: 0.75rem; }
-  .patient-id { font-weight: 600; }
-  .counts { color: var(--muted); font-size: 0.85rem; }
-  .badge {
-    display: inline-block;
-    padding: 0.2rem 0.6rem;
-    border-radius: 999px;
-    font-size: 0.75rem;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 13px;
     font-weight: 600;
+  }
+
+  .portal-card.researcher .portal-icon { background: var(--accent-dim); color: var(--accent); }
+  .portal-card.patient .portal-icon { background: var(--pass-dim); color: var(--pass); }
+
+  .portal-title {
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .portal-desc {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .portal-cta {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
-    letter-spacing: 0.02em;
+    color: var(--muted-2);
+    margin-top: 0.2rem;
   }
-  .badge-eligible { background: rgba(47,191,113,0.15); color: var(--green); }
-  .badge-ineligible { background: rgba(229,72,77,0.15); color: var(--red); }
-  .badge-needs_more_data { background: rgba(230,184,0,0.15); color: var(--amber); }
-  .verdict-pass { color: var(--green); }
-  .verdict-fail { color: var(--red); }
-  .verdict-unknown { color: var(--gray); }
-  .chevron { color: var(--muted); transition: transform 0.15s ease; }
-  .candidate.open .chevron { transform: rotate(90deg); }
-  .criteria-table {
-    display: none;
-    border-top: 1px solid var(--panel-border);
+
+  .portal-card.researcher:hover .portal-cta { color: var(--accent); }
+  .portal-card.patient:hover .portal-cta { color: var(--pass); }
+
+  .footnote {
+    color: var(--muted-2);
+    font-size: 11.5px;
+    margin-top: 2.5rem;
   }
-  .candidate.open .criteria-table { display: block; }
-  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-  th, td {
-    text-align: left;
-    padding: 0.5rem 1.1rem;
-    border-bottom: 1px solid var(--panel-border);
-    vertical-align: top;
-  }
-  th { color: var(--muted); font-weight: 500; font-size: 0.75rem; text-transform: uppercase; }
-  tr:last-child td { border-bottom: none; }
-  .crit-type { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; }
-  .crit-text { color: var(--muted); max-width: 260px; }
 </style>
 </head>
 <body>
 
-<header>
-  <h1>TriMatch Pro AI</h1>
-  <p class="subtitle">Clinical trial matching &mdash; ranked candidates with a per-criterion explanation for every decision.</p>
-  <div class="search-row">
-    <input type="text" id="nctId" placeholder="Enter an NCT ID, e.g. NCT04280705" />
-    <button id="loadBtn">Load candidates</button>
+<div class="wrap">
+  <div class="eyebrow">Clinical Trial Matching &amp; Research Assistant</div>
+  <h1>TriMatch <span class="dim">Pro AI</span></h1>
+  <p class="tagline">Automated, auditable clinical trial patient matching.</p>
+
+  <div class="portals">
+    <a class="portal-card researcher" href="researcher-login.html">
+      <div class="portal-icon">R</div>
+      <div class="portal-title">Researcher Portal</div>
+      <div class="portal-desc">Import trials, screen candidates against real patient data, track enrollment and trial-level outcomes.</div>
+      <div class="portal-cta">Enter as researcher &rarr;</div>
+    </a>
+    <a class="portal-card patient" href="patient-login.html">
+      <div class="portal-icon">P</div>
+      <div class="portal-title">Patient Portal</div>
+      <div class="portal-desc">Review trial invitations, read what a trial involves in plain language, and respond to consent requests.</div>
+      <div class="portal-cta">Enter as patient &rarr;</div>
+    </a>
   </div>
-  <div id="status" class="status"></div>
-</header>
 
-<main id="results"></main>
-
-<script>
-  const nctInput = document.getElementById('nctId');
-  const loadBtn = document.getElementById('loadBtn');
-  const statusEl = document.getElementById('status');
-  const resultsEl = document.getElementById('results');
-
-  function badgeClass(overall) {
-    return 'badge-' + overall.replace(/ /g, '_');
-  }
-
-  function escapeHtml(str) {
-    if (str === null || str === undefined) return '';
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
-  }
-
-  function renderCandidates(trial) {
-    const header = `
-      <div class="trial-header">
-        <h2>${escapeHtml(trial.title || trial.nct_id)}</h2>
-        <div class="trial-meta">${escapeHtml(trial.nct_id)} &middot; ${trial.criteria.length} criteria parsed &middot; ${trial.candidates.length} patients screened</div>
-      </div>
-    `;
-
-    const cards = trial.candidates.map((c, idx) => {
-      const rows = c.results.map(r => `
-        <tr>
-          <td>${escapeHtml(r.id)}<div class="crit-type">${escapeHtml(r.type)}</div></td>
-          <td class="crit-text">${escapeHtml(r.text)}</td>
-          <td class="verdict-${escapeHtml(r.verdict)}">${escapeHtml(r.verdict)}</td>
-          <td>${escapeHtml(Array.isArray(r.patient_value) ? r.patient_value.join(', ') : r.patient_value)}</td>
-          <td class="crit-text">${escapeHtml(r.reason)}</td>
-        </tr>
-      `).join('');
-
-      return `
-        <div class="candidate" id="candidate-${idx}">
-          <div class="candidate-summary" onclick="document.getElementById('candidate-${idx}').classList.toggle('open')">
-            <div class="candidate-left">
-              <span class="chevron">&#9656;</span>
-              <span class="patient-id">${escapeHtml(c.patient_id)}</span>
-              <span class="badge ${badgeClass(c.overall)}">${escapeHtml(c.overall)}</span>
-            </div>
-            <div class="counts">${c.pass_count} pass &middot; ${c.fail_count} fail &middot; ${c.unknown_count} unknown</div>
-          </div>
-          <div class="criteria-table">
-            <table>
-              <thead>
-                <tr><th>ID</th><th>Criterion</th><th>Verdict</th><th>Patient value</th><th>Reason</th></tr>
-              </thead>
-              <tbody>${rows}</tbody>
-            </table>
-          </div>
-        </div>
-      `;
-    }).join('');
-
-    resultsEl.innerHTML = header + cards;
-  }
-
-  async function loadCandidates() {
-    const nctId = nctInput.value.trim();
-    if (!nctId) return;
-
-    loadBtn.disabled = true;
-    resultsEl.innerHTML = '';
-    statusEl.textContent = 'Fetching trial and parsing eligibility criteria with an LLM — this can take up to 30 seconds…';
-    statusEl.className = 'status';
-
-    try {
-      const res = await fetch(`/trials/${encodeURIComponent(nctId)}/candidates`);
-      const data = await res.json();
-      if (!res.ok) {
-        statusEl.textContent = '';
-        resultsEl.innerHTML = `<div class="error">${escapeHtml(data.detail || 'Request failed')}</div>`;
-        return;
-      }
-      statusEl.textContent = '';
-      renderCandidates(data);
-    } catch (err) {
-      statusEl.textContent = '';
-      resultsEl.innerHTML = `<div class="error">Request failed: ${escapeHtml(err.message)}</div>`;
-    } finally {
-      loadBtn.disabled = false;
-    }
-  }
-
-  loadBtn.addEventListener('click', loadCandidates);
-  nctInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') loadCandidates();
-  });
-</script>
+  <div class="footnote">This is a prototype demonstration — sign-in accepts any name and does not store credentials.</div>
+</div>
 
 </body>
 </html>

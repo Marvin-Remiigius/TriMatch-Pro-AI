@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>TriMatch Pro AI — Patient Portal</title>
+<style>
+  :root {
+    --bg: #0C0D0F;
+    --panel: #141619;
+    --panel-2: #1A1D21;
+    --text: #E6E7E9;
+    --muted: #8A8F98;
+    --muted-2: #5D6169;
+    --line: #22252A;
+    --accent: #5B8DB8;
+    --accent-dim: rgba(91, 141, 184, 0.14);
+    --pass: #7BA786;
+    --pass-dim: rgba(123, 167, 134, 0.14);
+    --fail: #C06A5F;
+    --fail-dim: rgba(192, 106, 95, 0.14);
+    --unknown: #BCA274;
+    --unknown-dim: rgba(188, 162, 116, 0.14);
+    --radius: 3px;
+    --font-ui: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+    --ease: 140ms ease;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 14px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .mono { font-family: var(--font-mono); }
+
+  /* ---------- Session bar (shared shell) ---------- */
+
+  .session-bar {
+    border-bottom: 1px solid var(--line);
+    padding: 0.85rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .session-left { display: flex; align-items: center; gap: 0.6rem; }
+
+  .brand { font-weight: 600; font-size: 15px; letter-spacing: 0.01em; }
+  .brand .dim { color: var(--muted); font-weight: 400; }
+
+  .role-badge {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.5rem;
+    border-radius: var(--radius);
+  }
+  .role-badge.role-patient { background: var(--pass-dim); color: var(--pass); }
+
+  .session-name { color: var(--muted); font-size: 13px; }
+
+  .signout-btn {
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 0.4rem 0.8rem;
+    color: var(--muted);
+    font-size: 12.5px;
+    cursor: pointer;
+    transition: border-color var(--ease), color var(--ease);
+  }
+  .signout-btn:hover { border-color: var(--muted-2); color: var(--text); }
+
+  /* ---------- Body ---------- */
+
+  main {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 2.25rem 1.5rem 3rem;
+  }
+
+  .page-title { font-size: 19px; font-weight: 600; margin: 0 0 0.3rem; }
+  .page-sub { color: var(--muted); font-size: 13.5px; margin: 0 0 2rem; }
+
+  .skeleton, .detail-empty {
+    color: var(--muted-2);
+    font-size: 13px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.4rem;
+  }
+
+  .invite-card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 1.1rem 1.25rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .invite-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.3rem;
+  }
+
+  .invite-title { font-weight: 600; font-size: 14.5px; }
+  .invite-meta { font-family: var(--font-mono); color: var(--muted); font-size: 11.5px; margin-bottom: 0.75rem; }
+
+  .status-pill {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 0.15rem 0.5rem;
+    border-radius: var(--radius);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .status-pill.st-invited { background: var(--unknown-dim); color: var(--unknown); }
+  .status-pill.st-accepted { background: var(--unknown-dim); color: var(--unknown); }
+  .status-pill.st-consented { background: var(--accent-dim); color: var(--accent); }
+  .status-pill.st-enrolled { background: var(--pass-dim); color: var(--pass); }
+  .status-pill.st-declined { background: rgba(93, 97, 105, 0.12); color: var(--muted-2); }
+  .status-pill.st-withdrawn { background: var(--fail-dim); color: var(--fail); }
+
+  .invite-action a, .invite-action span.note {
+    font-size: 12.5px;
+  }
+
+  .invite-action a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+  .invite-action a:hover { text-decoration: underline; }
+
+  .invite-action span.note { color: var(--muted-2); }
+
+  .footnote {
+    color: var(--muted-2);
+    font-size: 11px;
+    margin-top: 2rem;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<div class="session-bar">
+  <div class="session-left">
+    <span class="brand">TriMatch <span class="dim">Patient Portal</span></span>
+    <span class="role-badge role-patient">Patient</span>
+    <span class="session-name" id="sessionName"></span>
+  </div>
+  <button class="signout-btn" id="signoutBtn">Sign out</button>
+</div>
+
+<main>
+  <div class="page-title">Your trial invitations</div>
+  <div class="page-sub">Trials a research team has invited you to, or that you're currently part of.</div>
+  <div id="content" class="skeleton">Loading…</div>
+  <div class="footnote">This is a prototype patient portal for demonstration.</div>
+</main>
+
+<script>
+  const patientId = sessionStorage.getItem('tm_patient_id');
+  const patientName = sessionStorage.getItem('tm_patient_name');
+
+  if (!patientId) {
+    window.location.href = 'patient-login.html';
+  }
+
+  document.getElementById('sessionName').textContent = patientName || '';
+  document.getElementById('signoutBtn').addEventListener('click', () => {
+    sessionStorage.removeItem('tm_patient_name');
+    sessionStorage.removeItem('tm_patient_id');
+    window.location.href = 'index.html';
+  });
+
+  function esc(str) {
+    if (str === null || str === undefined) return '';
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  const STATUS_LABEL = {
+    invited: 'Awaiting your response',
+    accepted: 'Response in progress',
+    consented: 'Consent recorded — pending enrollment',
+    enrolled: 'Enrolled',
+    declined: 'Declined',
+    withdrawn: 'Withdrawn',
+  };
+
+  const content = document.getElementById('content');
+
+  async function init() {
+    try {
+      const enrollRes = await fetch(`/patients/${encodeURIComponent(patientId)}/enrollment`);
+      const enrollments = await enrollRes.json();
+
+      if (!enrollRes.ok) {
+        content.innerHTML = `<div class="detail-empty">${esc(enrollments.detail || 'Could not load your invitations.')}</div>`;
+        return;
+      }
+
+      if (!enrollments.length) {
+        content.innerHTML = `<div class="detail-empty">No trial invitations found for patient ID <span class="mono">${esc(patientId)}</span>. If you believe this is an error, check the ID with your research coordinator.</div>`;
+        return;
+      }
+
+      const trials = await Promise.all(
+        enrollments.map(async (e) => {
+          try {
+            const res = await fetch(`/trials/${encodeURIComponent(e.nct_id)}`);
+            const trial = await res.json();
+            return res.ok ? trial : { nct_id: e.nct_id };
+          } catch (err) {
+            return { nct_id: e.nct_id };
+          }
+        })
+      );
+
+      content.innerHTML = enrollments.map((e, i) => {
+        const trial = trials[i];
+        const phase = Array.isArray(trial.phase) ? trial.phase.join(', ') : trial.phase;
+        const canOpen = ['invited', 'accepted', 'consented', 'enrolled'].includes(e.status);
+        const action = canOpen
+          ? `<a href="consent.html?patient=${encodeURIComponent(patientId)}&trial=${encodeURIComponent(e.nct_id)}">Open trial details &amp; consent status &rarr;</a>`
+          : `<span class="note">No further action available.</span>`;
+
+        return `
+          <div class="invite-card">
+            <div class="invite-top">
+              <div class="invite-title">${esc(trial.title || e.nct_id)}</div>
+              <span class="status-pill st-${esc(e.status)}">${esc(STATUS_LABEL[e.status] || e.status)}</span>
+            </div>
+            <div class="invite-meta">${esc(e.nct_id)}${phase ? ' · ' + esc(phase) : ''}</div>
+            <div class="invite-action">${action}</div>
+          </div>
+        `;
+      }).join('');
+    } catch (err) {
+      content.innerHTML = '<div class="detail-empty">Could not reach the server. Try again.</div>';
+    }
+  }
+
+  init();
+</script>
+
+</body>
+</html>
