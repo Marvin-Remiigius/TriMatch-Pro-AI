@@ -686,6 +686,72 @@ identical code path as before.
 
 ---
 
+## Hero trials: NCT07348718 + NCT04791358 (2026-08-16) — DONE
+
+Imported and evaluated two real ClinicalTrials.gov trials against the
+1000-patient dataset, purely to find which one produces the richest
+candidate screen for demos. Additive only: two new `trials` rows + their
+`trial_criteria` rows, using the existing import/parse/match pipeline. No
+DB schema change, no matcher logic change. Both trials are kept — neither
+was deleted.
+
+- **Trial A — NCT07348718 (Rubix LS Diabetic Kidney Disease Registry)**:
+  parsed into 9 criteria (3 structured: age >= 18, T2DM-required inclusion,
+  T1DM exclusion; 6 needs_review). Its real CKD/eGFR criterion text is
+  "eGFR <60 ... and/or UACR >=30" — a genuine OR against a lab we have no
+  UACR data for, so it correctly resolves to zero rules (needs_review,
+  unknown) rather than guessing — this is the OR-safety fix from the
+  compound-criteria change working correctly on new real-world text, not a
+  bug. Evaluated 30/30 sampled patients: 100% `ineligible`, with every
+  single patient landing on the *identical* shape (pass=2, fail=1,
+  unknown=6) — driven entirely by the T2DM-required inclusion gate (only
+  ~106/1000 patients are T2DM). eGFR never contributes any signal at all.
+- **Trial B — NCT04791358 (KidneyIntelX Decision Impact Trial)**: parsed
+  into 11 criteria (5 structured, 6 needs_review). Its "eGFR 30-60" text
+  parsed cleanly into a real 2-rule AND (`lab.egfr >= 30` AND
+  `lab.egfr <= 60`) and DOES evaluate against real per-patient lab values
+  (e.g. one sampled patient at eGFR 24.8 fails the lower bound, another at
+  eGFR 108.3 fails the upper bound) — unlike Trial A, eGFR is a live,
+  varying signal here. Evaluated 200/200 sampled patients: still 100%
+  `ineligible` overall, but across two distinct shapes (192x
+  pass=3/fail=2/unknown=6, 8x pass=3/fail=3/unknown=5) rather than Trial
+  A's single uniform shape.
+- **Structural finding (not a bug, not fixed — out of scope per this
+  task's "no matcher logic change" guardrail)**: Trial B's real eligibility
+  text lists two alternative renal-function pathways as separate inclusion
+  bullets — "eGFR 30-60" (criterion 89) and "eGFR >=60 with albuminuria"
+  (criterion 90) — which ClinicalTrials.gov intends as OR'd alternatives.
+  Our matcher ANDs every top-level criterion (`match_patient_db`: any
+  single `fail` verdict anywhere makes the whole thing `ineligible`), so a
+  patient must satisfy both mutually-exclusive eGFR ranges at once to ever
+  reach `eligible` — practically unreachable. This is a *between-criteria*
+  OR (two separate criterion rows), a different problem from the
+  *within-criterion* OR the compound-criteria change already handles (one
+  criterion's own sub-rules); fixing it would mean matcher logic changes
+  explicitly out of scope here.
+- **Field mapping**: re-confirmed `lab.egfr -> EGFR` bridging
+  (`resolve_db_field` in `db_matching.py`) needed zero changes and is not
+  the reason Trial A's eGFR stays unknown — verified by contrast: the
+  identical bridging correctly resolves real values for Trial B's eGFR
+  criteria on the same patients.
+- **Verdict / hero trial**: neither trial produces any `eligible` patient
+  in this dataset (both are 100% `ineligible` in the samples evaluated) —
+  an honest result of low T2DM prevalence in the seed data plus, for Trial
+  B, the OR-across-criteria structural gap above. **Trial B is the
+  recommended hero for the demo screen**: it has more structured criteria
+  (5 vs 3), and critically its eGFR criterion shows real, varying
+  pass/fail against actual lab values with cited `source_lab_result_id`s,
+  giving the per-criterion detail view genuine substance to point at.
+  Trial A's eGFR criterion never resolves to a rule at all, so its
+  candidate screen has one less real signal to show. Both trials remain
+  importable/matchable side by side; nothing about Trial A was removed.
+- Full regression pass after the imports: `/health` still `{status: ok}`,
+  and the pre-existing `NCT04280705` trial still matches normally against
+  the DB (1000 total patients, 10/10 sampled evaluated, no errors) —
+  confirming the two new trial rows didn't disturb the existing pipeline.
+
+---
+
 ## Demo narrative (what to show judges)
 1. Paste a real trial's messy eligibility text → watch it become clean rules.
 2. Show a ranked list of patients for that trial.
