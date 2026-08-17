@@ -1129,6 +1129,41 @@ verification action instead of an implicit design detail.
   still 200. No matcher, consent state machine, or audit logging code
   touched.
 
+## Trial Progress tab: visual/chart redesign (2026-08-17) — DONE
+
+The Trial Progress tab had real, correct data but read as sparse -- four
+raw numbers in a row, plain dot+text patient rows, and a right-hand
+detail panel that was just empty "Select a patient..." text until
+clicked, which the shared `.workspace` grid's `min-height: calc(100vh -
+60px)` turned into a large blank area. Fixed with pure-CSS charts (no
+library, no CDN, consistent with the rest of this dependency-free
+project) built from data the `/trials/{nct}/progress` endpoint already
+returns -- no backend or schema changes.
+
+- **Success-rate donut** (`conic-gradient`) replaces the flat headline
+  number, enrolled/active/dropouts moved beside it as compact figures.
+- **Cohort trend chart (new, fills the blank space)**: aggregates every
+  enrolled patient's tests client-side by `test_code` into improved/
+  worsened/indeterminate/no-data counts, rendered as one proportional
+  stacked bar per test with a legend. This is now the **default content**
+  of the right-hand detail panel (`progressDetailPanel`) before a patient
+  is selected, replacing the empty placeholder -- verified live on
+  `TM-METABOLIC-001` (18 enrolled): ALT 10 improved/5 worsened/3 no
+  signal, eGFR 11/4/3, etc., correctly proportioned bars.
+- **Percent-change bars**: a small colored track/fill next to every test
+  reading (list rows and the per-patient detail view alike), width scaled
+  to `|deviation/baseline_value|` (capped at 50% for visual range),
+  colored by the same pass/fail/muted tokens as everywhere else in the
+  app. Verified live: a patient with a large real eGFR drop (80.57 →
+  71.47) shows a visibly longer red bar than patients with small
+  fluctuations; `no_data` tests correctly render a zero-width/muted bar,
+  not a crash.
+- Verified: clicking a patient still drills into their full per-test
+  detail exactly as before (citations, dates, values all unchanged) --
+  the new chart is additive, not a replacement of that flow. Candidates
+  and Enrollment tabs confirmed visually and functionally untouched.
+- No backend/schema changes; `static/researcher.html` only.
+
 ## Demo narrative (what to show judges)
 1. Paste a real trial's messy eligibility text → watch it become clean rules.
 2. Show a ranked list of patients for that trial.
