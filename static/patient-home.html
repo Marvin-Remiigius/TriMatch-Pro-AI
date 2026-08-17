@@ -60,10 +60,27 @@
     flex-wrap: wrap;
   }
 
-  .session-left { display: flex; align-items: center; gap: 0.6rem; }
+  .session-left { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
 
   .brand { font-weight: 600; font-size: 15px; letter-spacing: 0.01em; }
   .brand .dim { color: var(--muted); font-weight: 400; }
+
+  .home-link {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--text);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 0.2rem 0.3rem 0.2rem 0.1rem;
+    border-radius: var(--radius);
+    transition: color var(--ease);
+  }
+  .home-link:hover { color: var(--accent); }
+  .home-mark { color: var(--pass); }
+
+  .crumb-sep { color: var(--muted-2); font-size: 12px; }
 
   .role-badge {
     font-family: var(--font-mono);
@@ -126,7 +143,14 @@
   }
 
   .invite-title { font-weight: 600; font-size: 14.5px; }
-  .invite-meta { font-family: var(--font-mono); color: var(--muted); font-size: 11.5px; margin-bottom: 0.75rem; }
+  .invite-meta {
+    font-size: 11.5px;
+    color: var(--muted-2);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-right: 0.4rem;
+  }
+  .invite-meta-value { font-family: var(--font-mono); color: var(--muted); font-size: 11.5px; margin-bottom: 0.75rem; }
 
   .status-pill {
     font-family: var(--font-mono);
@@ -170,8 +194,9 @@
 
 <div class="session-bar">
   <div class="session-left">
-    <span class="brand">TriMatch <span class="dim">Patient Portal</span></span>
-    <span class="role-badge role-patient">Patient</span>
+    <a class="home-link" href="index.html" title="Back to the TriMatch home page"><span class="home-mark">◆</span> TriMatch</a>
+    <span class="crumb-sep">›</span>
+    <span class="role-badge role-patient">Patient Portal</span>
     <span class="session-name" id="sessionName"></span>
   </div>
   <button class="signout-btn" id="signoutBtn">Sign out</button>
@@ -179,8 +204,8 @@
 
 <main>
   <div class="page-title">Your trial invitations</div>
-  <div class="page-sub">Trials a research team has invited you to, or that you're currently part of.</div>
-  <div id="content" class="skeleton">Loading…</div>
+  <div class="page-sub">Trials a research team has invited you to, or that you're currently part of. Open any invitation below to review the trial and respond.</div>
+  <div id="content" class="skeleton">Loading your trial invitations…</div>
   <div class="footnote">This is a prototype patient portal for demonstration.</div>
 </main>
 
@@ -211,6 +236,15 @@
     enrolled: 'Enrolled',
     declined: 'Declined',
     withdrawn: 'Withdrawn',
+  };
+
+  const STATUS_HELP = {
+    invited: 'A research team has invited you to this trial. Open it to review the details and respond.',
+    accepted: "You're in the middle of responding to this invitation.",
+    consented: 'You said yes — a research coordinator will confirm your enrollment soon.',
+    enrolled: "You're enrolled. The care team is tracking your results as part of this trial.",
+    declined: 'You declined this invitation. No further action is needed.',
+    withdrawn: 'You withdrew from this trial. No further data is being collected.',
   };
 
   const content = document.getElementById('content');
@@ -254,9 +288,9 @@
           <div class="invite-card">
             <div class="invite-top">
               <div class="invite-title">${esc(trial.title || e.nct_id)}</div>
-              <span class="status-pill st-${esc(e.status)}">${esc(STATUS_LABEL[e.status] || e.status)}</span>
+              <span class="status-pill st-${esc(e.status)}" title="${esc(STATUS_HELP[e.status] || '')}">${esc(STATUS_LABEL[e.status] || e.status)}</span>
             </div>
-            <div class="invite-meta">${esc(e.nct_id)}${phase ? ' · ' + esc(phase) : ''}</div>
+            <div><span class="invite-meta">Trial ID</span><span class="invite-meta-value">${esc(e.nct_id)}${phase ? ' · ' + esc(phase) : ''}</span></div>
             <div class="invite-action">${action}</div>
           </div>
         `;

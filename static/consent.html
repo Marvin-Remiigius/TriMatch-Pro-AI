@@ -66,6 +66,34 @@
     max-width: 560px;
   }
 
+  .crumb-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .home-link {
+    color: var(--text);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .home-link:hover { color: var(--accent); }
+
+  .crumb-sep { color: var(--muted-2); font-size: 12px; }
+  .crumb-text { color: var(--muted); font-size: 13px; }
+
+  .back-link {
+    display: inline-block;
+    color: var(--muted-2);
+    text-decoration: none;
+    font-size: 12.5px;
+    margin-bottom: 1.25rem;
+  }
+  .back-link:hover { color: var(--muted); }
+
   .brand {
     font-weight: 600;
     font-size: 14px;
@@ -332,8 +360,13 @@
 <body>
 
 <div class="card">
-  <div class="brand">TriMatch <span class="dim">Trial Consent</span></div>
-  <div id="content" class="skeleton">Loading…</div>
+  <div class="crumb-row">
+    <a class="home-link" href="index.html">TriMatch</a>
+    <span class="crumb-sep">›</span>
+    <span class="crumb-text">Patient Portal › Trial Consent</span>
+  </div>
+  <a class="back-link" href="patient-home.html">&larr; Back to my invitations</a>
+  <div id="content" class="skeleton">Loading your invitation…</div>
   <div class="footnote">This is a prototype consent screen for demonstration — not a legally binding consent form.</div>
 </div>
 
@@ -389,6 +422,15 @@
 
   function trendLabel(status) {
     return { improved: 'Improved', worsened: 'Worsened', indeterminate: 'No clear trend', no_data: 'No follow-up data yet' }[status] || status;
+  }
+
+  function trendHelp(status) {
+    return {
+      improved: 'Your latest result is better than your baseline.',
+      worsened: 'Your latest result is worse than your baseline.',
+      indeterminate: 'A newer result exists, but the direction of change is unclear for this test.',
+      no_data: 'No follow-up result has been recorded since your baseline yet.',
+    }[status] || '';
   }
 
   function renderWithdrawSection() {
@@ -462,7 +504,7 @@
                 <div class="name">${esc(t.test_name || t.test_code)}</div>
                 <div class="values">
                   ${t.baseline_value != null ? esc(t.baseline_value) : '—'} → ${t.latest_value != null ? esc(t.latest_value) : '—'}${t.unit ? ' ' + esc(t.unit) : ''}
-                  <div class="trend-badge trend-${esc(t.status)}">${esc(trendLabel(t.status))}</div>
+                  <div class="trend-badge trend-${esc(t.status)}" title="${esc(trendHelp(t.status))}">${esc(trendLabel(t.status))}</div>
                 </div>
               </div>
             `).join('')}
@@ -543,8 +585,8 @@
       </div>
 
       <h1>Invitation to participate</h1>
-      <div class="eyebrow">Patient</div>
-      <div class="mono">${esc(shortId(patientId))}</div>
+      <div class="eyebrow" title="This invitation is addressed to you, identified by your patient ID">Patient</div>
+      <div class="mono" title="Full patient ID — shortened here for display">${esc(shortId(patientId))}</div>
 
       <div class="terms">
         ${trial.primary_endpoint ? `<p>This trial is studying: <strong>${esc(trial.primary_endpoint)}</strong>.</p>` : ''}

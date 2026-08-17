@@ -80,7 +80,29 @@
     flex-wrap: wrap;
   }
 
-  .session-left { display: flex; align-items: center; gap: 0.6rem; }
+  .session-left { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+
+  .home-link {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--text);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 0.2rem 0.3rem 0.2rem 0.1rem;
+    border-radius: var(--radius);
+    transition: color var(--ease);
+  }
+  .home-link:hover { color: var(--accent); }
+  .home-mark { color: var(--accent); }
+
+  .crumb-sep { color: var(--muted-2); font-size: 12px; }
+
+  .crumb-current {
+    color: var(--muted);
+    font-size: 13px;
+  }
 
   .role-badge {
     font-family: var(--font-mono);
@@ -196,6 +218,18 @@
     font-size: 12px;
     white-space: nowrap;
   }
+
+  .example-btn {
+    background: transparent;
+    border: 1px dashed var(--muted-2);
+    border-radius: var(--radius);
+    padding: 0.5rem 0.8rem;
+    color: var(--muted);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color var(--ease), color var(--ease);
+  }
+  .example-btn:hover { border-color: var(--accent); color: var(--accent); }
 
   .status-line {
     padding: 0 1.5rem;
@@ -524,8 +558,8 @@
 
   .tab-row {
     display: none;
-    gap: 1.25rem;
-    padding: 0 1.5rem;
+    gap: 0.4rem;
+    padding: 0.6rem 1.5rem;
     border-bottom: 1px solid var(--line);
   }
 
@@ -533,24 +567,77 @@
 
   .tab-btn {
     background: none;
-    border: none;
-    border-bottom: 2px solid transparent;
+    border: 1px solid transparent;
+    border-radius: var(--radius);
     color: var(--muted);
-    padding: 0.65rem 0.1rem;
+    padding: 0.45rem 0.85rem;
     cursor: pointer;
     font-size: 13px;
-    transition: color var(--ease), border-color var(--ease);
+    font-weight: 500;
+    transition: color var(--ease), border-color var(--ease), background var(--ease);
   }
 
-  .tab-btn:hover { color: var(--text); }
+  .tab-btn:hover { color: var(--text); border-color: var(--line); background: var(--panel); }
 
   .tab-btn.active {
-    color: var(--text);
-    border-bottom-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-dim);
+    border-color: rgba(91, 141, 184, 0.35);
+    font-weight: 600;
   }
 
   .view { display: none; }
   .view.active { display: block; }
+
+  .view-sub {
+    color: var(--muted);
+    font-size: 12.5px;
+    padding: 0.9rem 1.5rem 0;
+  }
+
+  /* ---------- Empty states ---------- */
+
+  .empty-state {
+    border: 1px dashed var(--line);
+    border-radius: var(--radius);
+    padding: 1.4rem 1.5rem;
+  }
+
+  .empty-state-title {
+    font-size: 13.5px;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+  }
+
+  .empty-state-body {
+    color: var(--muted);
+    font-size: 12.5px;
+    line-height: 1.6;
+    max-width: 46ch;
+  }
+
+  .empty-state .example-btn {
+    margin-top: 0.9rem;
+  }
+
+  /* ---------- Legend ---------- */
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem 1rem;
+    font-size: 11px;
+    color: var(--muted);
+    margin: 0.6rem 0 1.1rem;
+  }
+
+  .legend .dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    margin-right: 0.35rem;
+  }
 
   /* ---------- Progress view ---------- */
 
@@ -868,6 +955,20 @@
 
   .er-id { font-family: var(--font-mono); font-size: 12.5px; }
 
+  .er-id-btn {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--text);
+    cursor: pointer;
+    text-decoration: underline dotted var(--muted-2);
+    text-underline-offset: 2px;
+  }
+  .er-id-btn:hover { color: var(--accent); }
+  .er-id-btn.copied { color: var(--pass); text-decoration: none; }
+
   .status-pill {
     font-family: var(--font-mono);
     font-size: 10px;
@@ -949,17 +1050,23 @@
 
 <div class="session-bar">
   <div class="session-left">
-    <span class="role-badge role-researcher">Researcher</span>
-    <span class="session-name" id="sessionName">Guest researcher</span>
+    <a class="home-link" href="index.html" title="Back to the TriMatch home page"><span class="home-mark">◆</span> TriMatch</a>
+    <span class="crumb-sep">›</span>
+    <span class="role-badge role-researcher">Researcher Portal</span>
+    <span class="crumb-sep" id="crumbSep" style="display:none">›</span>
+    <span class="crumb-current" id="crumbCurrent"></span>
   </div>
-  <button class="signout-btn" id="signoutBtn">Sign out</button>
+  <div class="session-left">
+    <span class="session-name" id="sessionName">Guest researcher</span>
+    <button class="signout-btn" id="signoutBtn">Sign out</button>
+  </div>
 </div>
 
 <header>
   <div class="brand">TriMatch <span class="dim">Researcher</span></div>
   <div class="load-row">
-    <input type="text" id="nctInput" placeholder="NCT ID, e.g. NCT04280705" />
-    <input type="number" id="patientCountInput" placeholder="Patients" value="30" min="1" max="1000" title="Number of patients to evaluate" />
+    <input type="text" id="nctInput" placeholder="NCT ID, e.g. NCT04280705" title="A ClinicalTrials.gov trial ID, or one of your own trial IDs" />
+    <input type="number" id="patientCountInput" placeholder="Patients" value="30" min="1" max="1000" title="How many patients from the pool to evaluate against this trial's criteria" />
     <button id="loadBtn">Load trial</button>
   </div>
   <div class="trial-info" id="trialInfo"></div>
@@ -968,25 +1075,33 @@
 <div class="tab-row" id="tabRow">
   <button class="tab-btn active" id="tabCandidates">Candidates</button>
   <button class="tab-btn" id="tabProgress">Trial progress</button>
-  <button class="tab-btn" id="tabEnrollment">Enrollment</button>
+  <button class="tab-btn" id="tabEnrollment">Enrollment &amp; consent</button>
 </div>
 
 <div class="status-line" id="statusLine"></div>
 
 <div class="view active" id="viewCandidates">
+  <div class="view-sub" id="candidatesViewSub" style="display:none">Patients ranked by how well they match this trial's eligibility criteria. Click any candidate for a full pass/fail breakdown.</div>
   <main class="workspace">
     <section class="panel candidates-panel">
       <div id="funnelArea"></div>
-      <div class="candidate-list" id="candidateList"></div>
+      <div class="candidate-list" id="candidateList">
+        <div class="empty-state">
+          <div class="empty-state-title">No trial loaded yet</div>
+          <div class="empty-state-body">Enter a clinical trial ID above — an NCT number from ClinicalTrials.gov, or your own trial ID — then click "Load trial" to see ranked, eligible candidates.</div>
+          <button type="button" class="example-btn" id="exampleBtnEmpty">Try example trial</button>
+        </div>
+      </div>
     </section>
 
     <section class="panel detail-panel" id="detailPanel">
-      <div class="detail-empty">Select a candidate to see the full breakdown.</div>
+      <div class="detail-empty">Load a trial and select a candidate on the left to see their full eligibility breakdown here.</div>
     </section>
   </main>
 </div>
 
 <div class="view" id="viewProgress">
+  <div class="view-sub">Compares each enrolled patient's most recent lab results against their baseline (the values recorded when they were enrolled), so you can see who's trending better or worse.</div>
   <main class="workspace">
     <section class="panel candidates-panel">
       <div id="metricsArea"></div>
@@ -994,12 +1109,13 @@
     </section>
 
     <section class="panel detail-panel" id="progressDetailPanel">
-      <div class="detail-empty">Select a patient to see their full test breakdown.</div>
+      <div class="detail-empty">Select a patient on the left to see their full test-by-test breakdown.</div>
     </section>
   </main>
 </div>
 
 <div class="view" id="viewEnrollment">
+  <div class="view-sub">Invite candidates to the trial, track their consent status as it changes, and review a complete audit log of every action taken.</div>
   <main class="workspace">
     <section class="panel candidates-panel">
       <div id="enrollmentSummary"></div>
@@ -1007,7 +1123,7 @@
     </section>
 
     <section class="panel detail-panel" id="auditPanel">
-      <div class="detail-empty">Audit trail for this trial will appear here.</div>
+      <div class="detail-empty">The audit trail — a timestamped record of every invite, consent, and enrollment action for this trial — will appear here.</div>
     </section>
   </main>
 </div>
@@ -1048,6 +1164,40 @@
   const enrollmentSummary = document.getElementById('enrollmentSummary');
   const enrollmentList = document.getElementById('enrollmentList');
   const auditPanel = document.getElementById('auditPanel');
+  const crumbSep = document.getElementById('crumbSep');
+  const crumbCurrent = document.getElementById('crumbCurrent');
+  const candidatesViewSub = document.getElementById('candidatesViewSub');
+  const exampleBtnEmpty = document.getElementById('exampleBtnEmpty');
+
+  const EXAMPLE_TRIAL_ID = 'TM-METABOLIC-001';
+
+  const TAB_LABELS = {
+    candidates: 'Candidates',
+    progress: 'Trial progress',
+    enrollment: 'Enrollment & consent',
+  };
+
+  const OVERALL_HELP = {
+    eligible: 'Meets every criterion the trial has structured data for.',
+    ineligible: 'Fails at least one eligibility criterion.',
+    'needs more data': "Doesn't fail anything, but is missing data needed to confirm eligibility on at least one criterion.",
+  };
+
+  const VERDICT_HELP = {
+    pass: 'This criterion is met.',
+    fail: 'This criterion is not met.',
+    unknown: "Missing data for this criterion — can't be confirmed either way, needs human review.",
+  };
+
+  const STATUS_HELP = {
+    not_invited: 'Not yet invited to this trial.',
+    invited: 'Invitation sent; awaiting the patient’s response.',
+    accepted: 'Patient is in the middle of responding to consent.',
+    consented: 'Patient has consented; awaiting researcher enrollment.',
+    enrolled: 'Enrolled in the trial — baseline set, progress is being tracked.',
+    declined: 'Patient declined the invitation.',
+    withdrawn: 'Patient withdrew after previously accepting or enrolling.',
+  };
 
   let currentNctId = null;
   let currentPatientCount = 30;
@@ -1066,6 +1216,20 @@
     return id.length > 10 ? id.slice(0, 8) : id;
   }
 
+  function copyFullId(btn) {
+    const fullId = btn.dataset.fullId;
+    const original = btn.textContent;
+    const revert = () => { btn.textContent = original; btn.classList.remove('copied'); };
+    navigator.clipboard.writeText(fullId).then(() => {
+      btn.textContent = 'Copied full ID';
+      btn.classList.add('copied');
+      setTimeout(revert, 1200);
+    }).catch(() => {
+      btn.textContent = fullId;
+      setTimeout(revert, 2000);
+    });
+  }
+
   function setStatus(message) {
     statusLine.innerHTML = message ? `<div class="status-msg">${esc(message)}</div>` : '';
   }
@@ -1076,6 +1240,24 @@
 
   function badgeClass(overall) {
     return 'badge-' + overall.replace(/ /g, '_');
+  }
+
+  function emptyStateHtml() {
+    return `
+      <div class="empty-state">
+        <div class="empty-state-title">No trial loaded yet</div>
+        <div class="empty-state-body">Enter a clinical trial ID above — an NCT number from ClinicalTrials.gov, or your own trial ID — then click "Load trial" to see ranked, eligible candidates.</div>
+        <button type="button" class="example-btn" id="exampleBtnEmpty">Try example trial</button>
+      </div>
+    `;
+  }
+
+  function wireExampleButton() {
+    const btn = document.getElementById('exampleBtnEmpty');
+    if (btn) btn.addEventListener('click', () => {
+      nctInput.value = EXAMPLE_TRIAL_ID;
+      loadTrial();
+    });
   }
 
   async function loadTrial() {
@@ -1103,14 +1285,20 @@
     cachedCandidates = null;
     cachedCandidatesFor = null;
     tabRow.classList.remove('visible');
+    crumbSep.style.display = 'none';
+    crumbCurrent.textContent = '';
+    candidatesViewSub.style.display = 'none';
     switchTab('candidates');
-    setStatus('Loading trial…');
+    stopEnrollmentPolling();
+    setStatus(`Loading trial ${nctId}…`);
 
     try {
       const res = await fetch(`/trials/${encodeURIComponent(nctId)}`);
       const data = await res.json();
       if (!res.ok) {
-        setError(data.detail || 'No trial found for that ID.');
+        setError(data.detail || 'No trial found for that ID. Double-check the ID, or try our example trial.');
+        candidateList.innerHTML = emptyStateHtml();
+        wireExampleButton();
         loadBtn.disabled = false;
         return;
       }
@@ -1122,16 +1310,22 @@
         <span class="meta">${esc(data.nct_id)}${phase ? ' · ' + esc(phase) : ''}${data.overall_status ? ' · ' + esc(data.overall_status) : ''}</span>
       `;
       tabRow.classList.add('visible');
+      crumbSep.style.display = '';
+      candidatesViewSub.style.display = '';
+      switchTab('candidates');
 
       await loadCandidates(currentNctId);
     } catch (err) {
       setError('Could not reach the server. Try again.');
+      candidateList.innerHTML = emptyStateHtml();
+      wireExampleButton();
     } finally {
       loadBtn.disabled = false;
     }
   }
 
   function switchTab(tab) {
+    crumbCurrent.textContent = TAB_LABELS[tab] || '';
     tabCandidates.classList.toggle('active', tab === 'candidates');
     tabProgress.classList.toggle('active', tab === 'progress');
     tabEnrollment.classList.toggle('active', tab === 'enrollment');
@@ -1141,7 +1335,7 @@
   }
 
   async function loadCandidates(nctId) {
-    setStatus('Matching candidates against this trial’s criteria…');
+    setStatus(`Evaluating ${currentPatientCount} patients against this trial's eligibility criteria…`);
     candidateList.innerHTML = '';
     funnelArea.innerHTML = '';
 
@@ -1150,6 +1344,8 @@
       const data = await res.json();
       if (!res.ok) {
         setError(data.detail || 'No parsed criteria for this trial yet.');
+        candidateList.innerHTML = emptyStateHtml();
+        wireExampleButton();
         return;
       }
 
@@ -1157,14 +1353,19 @@
 
       funnelArea.innerHTML = `
         <div class="funnel">
-          <div class="funnel-figure">${data.evaluated_count}<span class="of"> / ${data.total_patients}</span></div>
+          <div class="funnel-figure" title="How many patients were fully checked against every eligibility criterion, out of the total patient pool">${data.evaluated_count}<span class="of"> / ${data.total_patients}</span></div>
           <div class="funnel-label">patients evaluated</div>
-          <div class="funnel-sub">${data.coarse_filtered_count} matched the coarse filter · showing ${data.returned}</div>
+          <div class="funnel-sub" title="A fast pre-filter narrows the full patient pool down to likely matches before the full criteria check runs on each one">${data.coarse_filtered_count} passed an initial screen · showing top ${data.returned}</div>
+        </div>
+        <div class="legend">
+          <span title="${esc(OVERALL_HELP.eligible)}"><span class="dot" style="background:var(--pass)"></span>Eligible</span>
+          <span title="${esc(OVERALL_HELP.ineligible)}"><span class="dot" style="background:var(--fail)"></span>Ineligible</span>
+          <span title="${esc(OVERALL_HELP['needs more data'])}"><span class="dot" style="background:var(--unknown)"></span>Needs more data</span>
         </div>
       `;
 
       if (data.candidates.length === 0) {
-        candidateList.innerHTML = '<div class="detail-empty">No candidates matched.</div>';
+        candidateList.innerHTML = '<div class="detail-empty">No candidates matched this trial\'s criteria in the evaluated pool. Try increasing the patient count above, or load a different trial.</div>';
         return;
       }
 
@@ -1173,11 +1374,11 @@
         return `
           <button class="candidate" data-pid="${esc(c.patient_id)}">
             <div class="candidate-top">
-              <span class="candidate-id mono">${esc(shortId(c.patient_id))}</span>
-              <span class="badge ${badgeClass(c.overall)}">${esc(c.overall)}</span>
+              <span class="candidate-id mono" title="Patient ID (shortened) — open a candidate to see the full ID">${esc(shortId(c.patient_id))}</span>
+              <span class="badge ${badgeClass(c.overall)}" title="${esc(OVERALL_HELP[c.overall] || '')}">${esc(c.overall)}</span>
             </div>
             ${demo ? `<div class="candidate-demo">${esc(demo)}</div>` : ''}
-            <div class="candidate-tally">${c.pass_count} pass · ${c.fail_count} fail · ${c.unknown_count} unknown</div>
+            <div class="candidate-tally" title="Per-criterion results: how many the patient passed, failed, or has unknown/missing data for">${c.pass_count} pass · ${c.fail_count} fail · ${c.unknown_count} unknown</div>
           </button>
         `;
       }).join('');
@@ -1187,6 +1388,8 @@
       });
     } catch (err) {
       setError('Could not reach the server. Try again.');
+      candidateList.innerHTML = emptyStateHtml();
+      wireExampleButton();
     }
   }
 
@@ -1212,7 +1415,7 @@
       const verifyButton = (labResultId, patientValue, panelId) => {
         if (labResultId === null || labResultId === undefined) return '';
         const expected = JSON.stringify(patientValue === undefined ? null : patientValue);
-        return `<button class="verify-btn" data-lab-id="${esc(labResultId)}" data-expected='${esc(expected)}' data-panel="${panelId}">Verify source &rarr;</button>`;
+        return `<button class="verify-btn" data-lab-id="${esc(labResultId)}" data-expected='${esc(expected)}' data-panel="${panelId}" title="Fetch the original lab record and confirm it matches the value used here">Verify source &rarr;</button>`;
       };
 
       const renderRuleBreakdown = (r) => {
@@ -1225,7 +1428,7 @@
             <div class="rule-row">
               <div class="rule-head">
                 <span>${groupLabel}${esc(rr.field)} ${esc(rr.operator)} ${esc(rr.value)}
-                  <span class="kv-value">(patient: ${esc(rr.patient_value)})</span></span>
+                  <span class="kv-value">(patient's value: ${esc(rr.patient_value)})</span></span>
                 ${verifyButton(rr.source_lab_result_id, rr.patient_value, panelId)}
               </div>
               <div id="${panelId}"></div>
@@ -1237,15 +1440,16 @@
 
       const renderCriterion = (r) => {
         const topPanelId = `verify-${esc(r.id)}`;
+        const valueLabel = r.field ? esc(r.field) : 'value';
         return `
         <div class="criterion">
           <div class="criterion-top">
             <div class="criterion-text">${esc(r.text)}</div>
-            <span class="verdict-pill verdict-${esc(r.verdict)}">${esc(r.verdict)}</span>
+            <span class="verdict-pill verdict-${esc(r.verdict)}" title="${esc(VERDICT_HELP[r.verdict] || '')}">${esc(r.verdict)}</span>
           </div>
           <div class="criterion-meta">
-            ${r.patient_value !== null && r.patient_value !== undefined ? `<span><span class="kv-label">value </span><span class="kv-value">${esc(Array.isArray(r.patient_value) ? r.patient_value.join(', ') : r.patient_value)}</span></span>` : ''}
-            ${r.source_lab_result_id !== null && r.source_lab_result_id !== undefined ? `<span><span class="kv-label">source </span><span class="kv-value">lab_result #${esc(r.source_lab_result_id)}</span></span> ${verifyButton(r.source_lab_result_id, r.patient_value, topPanelId)}` : ''}
+            ${r.patient_value !== null && r.patient_value !== undefined ? `<span title="The data field this criterion checks, and this patient's value for it"><span class="kv-label">${valueLabel}: </span><span class="kv-value">${esc(Array.isArray(r.patient_value) ? r.patient_value.join(', ') : r.patient_value)}</span></span>` : ''}
+            ${r.source_lab_result_id !== null && r.source_lab_result_id !== undefined ? `<span title="The database record this value was read from"><span class="kv-label">source record </span><span class="kv-value">#${esc(r.source_lab_result_id)}</span></span> ${verifyButton(r.source_lab_result_id, r.patient_value, topPanelId)}` : ''}
           </div>
           <div class="criterion-reason">${esc(r.reason)}</div>
           <div id="${topPanelId}"></div>
@@ -1256,11 +1460,16 @@
 
       detailPanel.innerHTML = `
         <div class="detail-header">
-          <span class="id">${esc(shortId(patientId))}</span>
-          <span class="demo">${esc(data.overall)}</span>
+          <span class="id" title="Full patient ID — shortened here for display">${esc(shortId(patientId))}</span>
+          <span class="badge ${badgeClass(data.overall)}" title="${esc(OVERALL_HELP[data.overall] || '')}">${esc(data.overall)}</span>
         </div>
-        ${inclusions.length ? `<div class="eyebrow group-label">Inclusion</div>${inclusions.map(renderCriterion).join('')}` : ''}
-        ${exclusions.length ? `<div class="eyebrow group-label">Exclusion</div>${exclusions.map(renderCriterion).join('')}` : ''}
+        <div class="legend">
+          <span title="${esc(VERDICT_HELP.pass)}"><span class="dot" style="background:var(--pass)"></span>Pass = criterion met</span>
+          <span title="${esc(VERDICT_HELP.fail)}"><span class="dot" style="background:var(--fail)"></span>Fail = not met</span>
+          <span title="${esc(VERDICT_HELP.unknown)}"><span class="dot" style="background:var(--unknown)"></span>Unknown = missing data</span>
+        </div>
+        ${inclusions.length ? `<div class="eyebrow group-label" title="Requirements the patient must meet to qualify for this trial">Inclusion criteria</div>${inclusions.map(renderCriterion).join('')}` : ''}
+        ${exclusions.length ? `<div class="eyebrow group-label" title="Conditions that would disqualify the patient from this trial">Exclusion criteria</div>${exclusions.map(renderCriterion).join('')}` : ''}
       `;
     } catch (err) {
       detailPanel.innerHTML = '<div class="detail-empty">Could not reach the server. Try again.</div>';
@@ -1303,10 +1512,10 @@
         <div class="verify-panel">
           <div class="verify-row"><span class="k">test</span><span class="v">${esc(data.test_name)} (${esc(data.test_code)})</span></div>
           <div class="verify-row"><span class="k">value</span><span class="v${data.abnormal_flag ? ' abnormal' : ''}">${esc(data.value)}${data.unit ? ' ' + esc(data.unit) : ''}${data.abnormal_flag ? ' — abnormal' : ''}</span></div>
-          ${hasRange ? `<div class="verify-row"><span class="k">reference range</span><span class="v">${esc(data.reference_min)} – ${esc(data.reference_max)}</span></div>` : ''}
+          ${hasRange ? `<div class="verify-row"><span class="k" title="The normal range for this test — values outside it are flagged abnormal">reference range</span><span class="v">${esc(data.reference_min)} – ${esc(data.reference_max)}</span></div>` : ''}
           <div class="verify-row"><span class="k">test date</span><span class="v">${esc((data.test_date || '').replace('T', ' ').slice(0, 19)) || '—'}</span></div>
           <div class="verify-row"><span class="k">entered into system</span><span class="v">${esc((data.created_at || '').replace('T', ' ').slice(0, 19)) || '—'}</span></div>
-          <div class="verify-row"><span class="k">lab report</span><span class="v">${esc(data.lab_report_id) || '—'}</span></div>
+          <div class="verify-row"><span class="k" title="Which lab report batch this result came from">lab report</span><span class="v">${esc(data.lab_report_id) || '—'}</span></div>
           ${comparable.length ? `<div class="verify-status ${matches ? 'ok' : 'mismatch'}">${matches ? '✓ Verified — matches the value this verdict used' : '⚠ Mismatch — source value differs from what the verdict used'}</div>` : ''}
         </div>
       `;
@@ -1392,7 +1601,7 @@
   }
 
   async function loadProgress(nctId) {
-    metricsArea.innerHTML = '<div class="skeleton">Computing baseline-vs-latest progress…</div>';
+    metricsArea.innerHTML = '<div class="skeleton">Comparing enrolled patients\' latest results to their baseline…</div>';
     progressList.innerHTML = '';
 
     try {
@@ -1416,19 +1625,19 @@
 
       metricsArea.innerHTML = `
         <div class="metrics-top">
-          <div class="progress-ring" style="background: ${ringGradient}">
+          <div class="progress-ring" style="background: ${ringGradient}" title="Share of enrolled patients whose most recent result improved over their baseline">
             <div class="progress-ring-hole"><span class="progress-ring-pct">${successPct}</span></div>
           </div>
           <div class="metrics-side">
-            <div class="metric">
+            <div class="metric" title="Patients currently enrolled or previously enrolled in this trial">
               <div class="metric-figure">${data.enrolled}</div>
               <div class="metric-label">enrolled</div>
             </div>
-            <div class="metric">
+            <div class="metric" title="Enrolled patients who have not withdrawn">
               <div class="metric-figure">${data.active}</div>
               <div class="metric-label">active</div>
             </div>
-            <div class="metric">
+            <div class="metric" title="Enrolled patients who later withdrew from the trial">
               <div class="metric-figure">${data.dropouts}</div>
               <div class="metric-label">dropouts</div>
             </div>
@@ -1443,7 +1652,7 @@
       `;
 
       if (data.patients.length === 0) {
-        progressList.innerHTML = '<div class="detail-empty">No patients enrolled in this trial yet.</div>';
+        progressList.innerHTML = '<div class="detail-empty">No patients enrolled in this trial yet. Enrolled patients — and their progress against baseline — will show up here once the Enrollment &amp; consent tab has moved someone to "enrolled".</div>';
         progressDetailPanel.innerHTML = '<div class="detail-empty">No patients enrolled in this trial yet.</div>';
         return;
       }
@@ -1453,17 +1662,17 @@
       progressList.innerHTML = data.patients.map(p => {
         const rows = p.tests.map(t => `
           <div class="test-readout">
-            <span class="dev-dot ${devClass(t.status)}"></span>
-            <span>${esc(t.test_code)}</span>
-            <span class="readout-value">${fmtValue(t.baseline_value)} → ${fmtValue(t.latest_value)}</span>
+            <span class="dev-dot ${devClass(t.status)}" title="${esc(t.test_name || t.test_code)}: ${esc(devClass(t.status).replace('dev-', ''))}"></span>
+            <span title="${esc(t.test_name || t.test_code)}">${esc(t.test_code)}</span>
+            <span class="readout-value">${fmtValue(t.baseline_value)} → ${fmtValue(t.latest_value)}${t.unit ? ' ' + esc(t.unit) : ''}</span>
             ${changeBarHtml(t)}
           </div>
         `).join('');
         return `
           <button class="patient-progress-row" data-pid="${esc(p.patient_id)}">
             <div class="ppr-top">
-              <span class="ppr-id mono">${esc(shortId(p.patient_id))}</span>
-              <span class="status-tag">${esc(p.status)}</span>
+              <span class="ppr-id mono" title="Full patient ID — shortened here for display">${esc(shortId(p.patient_id))}</span>
+              <span class="status-tag" title="${esc(STATUS_HELP[p.status] || '')}">${esc(p.status)}</span>
             </div>
             <div class="ppr-tests">${rows}</div>
           </button>
@@ -1494,24 +1703,24 @@
       <div class="test-detail">
         <div class="test-detail-top">
           <span class="test-name">${esc(t.test_name)} <span class="mono" style="color: var(--muted); font-weight: 400;">(${esc(t.test_code)})</span></span>
-          <span class="dev-pill ${devClass(t.status)}"><span class="dev-dot ${devClass(t.status)}"></span>${esc(t.status.replace('_', ' '))}</span>
+          <span class="dev-pill ${devClass(t.status)}" title="${esc({improved: 'Latest result is better than baseline', worsened: 'Latest result is worse than baseline', indeterminate: 'A newer result exists, but the direction of change is unclear for this test', no_data: 'No follow-up result recorded since baseline'}[t.status] || '')}"><span class="dev-dot ${devClass(t.status)}"></span>${esc(t.status.replace('_', ' '))}</span>
         </div>
-        <div class="test-readout-line">
-          ${fmtValue(t.baseline_value)}${t.unit ? ' ' + esc(t.unit) : ''} → ${fmtValue(t.latest_value)}${t.unit ? ' ' + esc(t.unit) : ''}
+        <div class="test-readout-line" title="Baseline value at enrollment, compared to the most recent recorded value">
+          Baseline ${fmtValue(t.baseline_value)}${t.unit ? ' ' + esc(t.unit) : ''} → Latest ${fmtValue(t.latest_value)}${t.unit ? ' ' + esc(t.unit) : ''}
           ${t.deviation !== null && t.deviation !== undefined ? `<span style="color: var(--muted);"> (${t.deviation > 0 ? '+' : ''}${t.deviation})</span>` : ''}
         </div>
         <div class="change-bar-wrap" style="margin-top: 0.4rem;">${changeBarHtml(t)}</div>
         <div class="test-citations">
-          <span>baseline ${fmtDate(t.baseline_date) || '—'}${t.baseline_lab_result_id ? ` · lab_result #${t.baseline_lab_result_id}` : ''}</span>
-          <span>latest ${fmtDate(t.latest_date) || '—'}${t.latest_lab_result_id ? ` · lab_result #${t.latest_lab_result_id}` : ''}</span>
+          <span title="The source lab record behind the baseline value">baseline ${fmtDate(t.baseline_date) || '—'}${t.baseline_lab_result_id ? ` · source record #${t.baseline_lab_result_id}` : ''}</span>
+          <span title="The source lab record behind the latest value">latest ${fmtDate(t.latest_date) || '—'}${t.latest_lab_result_id ? ` · source record #${t.latest_lab_result_id}` : ''}</span>
         </div>
       </div>
     `;
 
     progressDetailPanel.innerHTML = `
       <div class="detail-header">
-        <span class="id">${esc(shortId(patientId))}</span>
-        <span class="demo">${esc(patient.status)} · baseline ${fmtDate(patient.baseline_date) || '—'}</span>
+        <span class="id" title="Full patient ID — shortened here for display">${esc(shortId(patientId))}</span>
+        <span class="demo" title="${esc(STATUS_HELP[patient.status] || '')}">${esc(patient.status)} · baseline ${fmtDate(patient.baseline_date) || '—'}</span>
       </div>
       ${patient.tests.map(renderTest).join('')}
     `;
@@ -1524,16 +1733,16 @@
   function renderEnrollmentActions(patientId, status) {
     const buttons = [];
     if (status === 'not_invited') {
-      buttons.push(`<button class="er-btn" data-action="invite" data-pid="${esc(patientId)}">Invite</button>`);
+      buttons.push(`<button class="er-btn" data-action="invite" data-pid="${esc(patientId)}" title="Send this patient a trial invitation">Send invite</button>`);
     }
     if (status === 'invited') {
-      buttons.push(`<a class="er-link" href="/consent.html?patient=${encodeURIComponent(patientId)}&trial=${encodeURIComponent(currentNctId)}" target="_blank" rel="noopener">Open consent screen ↗</a>`);
+      buttons.push(`<a class="er-link" href="/consent.html?patient=${encodeURIComponent(patientId)}&trial=${encodeURIComponent(currentNctId)}" target="_blank" rel="noopener" title="Opens the patient-facing consent screen in a new tab">Open consent screen ↗</a>`);
     }
     if (status === 'consented') {
-      buttons.push(`<button class="er-btn" data-action="enroll" data-pid="${esc(patientId)}">Enroll</button>`);
+      buttons.push(`<button class="er-btn" data-action="enroll" data-pid="${esc(patientId)}" title="Confirm enrollment now that the patient has consented — this sets their baseline date">Confirm enrollment</button>`);
     }
     if (['invited', 'accepted', 'consented', 'enrolled'].includes(status)) {
-      buttons.push(`<button class="er-btn danger" data-action="withdraw" data-pid="${esc(patientId)}">Withdraw</button>`);
+      buttons.push(`<button class="er-btn danger" data-action="withdraw" data-pid="${esc(patientId)}" title="Withdraw this patient from the trial">Withdraw</button>`);
     }
     return buttons.join('');
   }
@@ -1551,6 +1760,11 @@
       if (haveCache) {
         candidates = cachedCandidates;
       } else {
+        // This re-evaluates every candidate against the trial's criteria --
+        // one or more Supabase round trips per candidate -- so it must only
+        // ever run for a manual/first load of this trial, never from the
+        // background poller below. Once it succeeds it's cached for the
+        // rest of the session (see cachedCandidates / cachedCandidatesFor).
         const candRes = await fetch(`/trials/${encodeURIComponent(nctId)}/db-candidates?limit=${currentPatientCount}&max_evaluate=${currentPatientCount}`);
         const candData = await candRes.json();
         if (!candRes.ok) {
@@ -1562,57 +1776,82 @@
         cachedCandidatesFor = nctId;
       }
 
-      const enrollRes = await fetch(`/trials/${encodeURIComponent(nctId)}/enrollment`);
-      const enrollData = await enrollRes.json();
-
-      enrollmentLoadedFor = nctId;
-      const statusByPatient = {};
-      if (enrollRes.ok) {
-        enrollData.forEach(e => { statusByPatient[e.patient_id] = e.status; });
-      }
-
-      const counts = {};
-      candidates.forEach(c => {
-        const st = statusByPatient[c.patient_id] || 'not_invited';
-        counts[st] = (counts[st] || 0) + 1;
-      });
-
-      enrollmentSummary.innerHTML = `
-        <div class="funnel">
-          <div class="funnel-figure">${candidates.length}<span class="of"> candidates</span></div>
-          <div class="funnel-label">from the ranked list</div>
-          <div class="funnel-sub">${Object.entries(counts).map(([k, v]) => `${v} ${k.replace('_', ' ')}`).join(' · ')}</div>
-        </div>
-      `;
-
-      enrollmentList.innerHTML = candidates.map(c => {
-        const status = statusByPatient[c.patient_id] || 'not_invited';
-        return `
-          <div class="enrollment-row">
-            <div class="er-top">
-              <span class="er-id mono">${esc(shortId(c.patient_id))}</span>
-              <span class="badge ${badgeClass(c.overall)}">${esc(c.overall)}</span>
-            </div>
-            <div class="candidate-demo">
-              <span class="status-pill ${statusPillClass(status)}">${esc(status.replace('_', ' '))}</span>
-            </div>
-            <div class="er-actions">${renderEnrollmentActions(c.patient_id, status)}</div>
-          </div>
-        `;
-      }).join('');
-
-      enrollmentList.querySelectorAll('.er-btn').forEach(btn => {
-        btn.addEventListener('click', () => performAction(btn.dataset.pid, btn.dataset.action));
-      });
-
-      await loadAuditTrail(nctId);
+      await renderEnrollmentAndAudit(nctId, candidates, quiet);
     } catch (err) {
       enrollmentSummary.innerHTML = '<div class="detail-empty">Could not reach the server. Try again.</div>';
     }
   }
 
-  async function loadAuditTrail(nctId) {
-    auditPanel.innerHTML = '<div class="skeleton">Loading audit trail…</div>';
+  async function renderEnrollmentAndAudit(nctId, candidates, quiet) {
+    const enrollRes = await fetch(`/trials/${encodeURIComponent(nctId)}/enrollment`);
+    const enrollData = await enrollRes.json();
+
+    enrollmentLoadedFor = nctId;
+    const statusByPatient = {};
+    if (enrollRes.ok) {
+      enrollData.forEach(e => { statusByPatient[e.patient_id] = e.status; });
+    }
+
+    const counts = {};
+    candidates.forEach(c => {
+      const st = statusByPatient[c.patient_id] || 'not_invited';
+      counts[st] = (counts[st] || 0) + 1;
+    });
+
+    enrollmentSummary.innerHTML = `
+      <div class="funnel">
+        <div class="funnel-figure">${candidates.length}<span class="of"> candidates</span></div>
+        <div class="funnel-label" title="The same ranked candidate list from the Candidates tab">from the ranked list</div>
+        <div class="funnel-sub">${Object.entries(counts).map(([k, v]) => `<span title="${esc(STATUS_HELP[k] || '')}">${v} ${k.replace('_', ' ')}</span>`).join(' · ')}</div>
+      </div>
+    `;
+
+    enrollmentList.innerHTML = candidates.map(c => {
+      const status = statusByPatient[c.patient_id] || 'not_invited';
+      return `
+        <div class="enrollment-row">
+          <div class="er-top">
+            <button type="button" class="er-id-btn mono" data-full-id="${esc(c.patient_id)}" title="Click to copy the full patient ID -- share this with the patient so they can sign in to the patient portal">${esc(shortId(c.patient_id))}</button>
+            <span class="badge ${badgeClass(c.overall)}" title="${esc(OVERALL_HELP[c.overall] || '')}">${esc(c.overall)}</span>
+          </div>
+          <div class="candidate-demo">
+            <span class="status-pill ${statusPillClass(status)}" title="${esc(STATUS_HELP[status] || '')}">${esc(status.replace('_', ' '))}</span>
+          </div>
+          <div class="er-actions">${renderEnrollmentActions(c.patient_id, status)}</div>
+        </div>
+      `;
+    }).join('');
+
+    enrollmentList.querySelectorAll('.er-btn').forEach(btn => {
+      btn.addEventListener('click', () => performAction(btn.dataset.pid, btn.dataset.action));
+    });
+
+    enrollmentList.querySelectorAll('.er-id-btn').forEach(btn => {
+      btn.addEventListener('click', () => copyFullId(btn));
+    });
+
+    await loadAuditTrail(nctId, quiet);
+  }
+
+  async function pollEnrollmentStatus(nctId) {
+    // Background refresh while the Enrollment tab is open. Deliberately
+    // skips db-candidates -- that call re-runs full criteria matching for
+    // every candidate and is expensive/fragile under repeated load (it was
+    // the actual source of the "500 in a loop" bug: polling used to fall
+    // through to loadEnrollment, which retried the full candidate match
+    // every 4s -- and every time, forever -- whenever that match had ever
+    // failed once). If we don't have a successful candidate list cached
+    // yet, there's nothing cheap to refresh, so just skip this tick.
+    if (cachedCandidatesFor !== nctId || !cachedCandidates) return;
+    try {
+      await renderEnrollmentAndAudit(nctId, cachedCandidates, true);
+    } catch (err) {
+      // Transient poll failure -- stay quiet, next tick will retry.
+    }
+  }
+
+  async function loadAuditTrail(nctId, quiet) {
+    if (!quiet) auditPanel.innerHTML = '<div class="skeleton">Loading audit trail…</div>';
     try {
       const res = await fetch(`/trials/${encodeURIComponent(nctId)}/audit?limit=100`);
       const data = await res.json();
@@ -1621,26 +1860,35 @@
         return;
       }
       if (data.length === 0) {
-        auditPanel.innerHTML = '<div class="detail-empty">No audit events for this trial yet.</div>';
+        auditPanel.innerHTML = '<div class="detail-empty">No audit events for this trial yet. Every invite, consent, and enrollment action will be logged here as it happens.</div>';
         return;
       }
+      const ACTION_LABELS = {
+        'patient.invited': 'Invitation sent',
+        'patient.accepted': 'Patient began responding',
+        'consent.recorded': 'Consent recorded',
+        'patient.enrolled': 'Enrollment confirmed',
+        'patient.withdrawn': 'Patient withdrew',
+        'patient.declined': 'Patient declined',
+      };
       const rows = data.map(row => {
         const detail = row.detail ? `${esc(row.detail.from_status || '—')} → ${esc(row.detail.to_status || '—')}` : '—';
+        const fullPatientId = (row.entity_id || '').split(':')[0];
         return `
           <tr>
             <td>${esc((row.created_at || '').replace('T', ' ').slice(0, 19))}</td>
-            <td class="actor-${esc(row.actor)}">${esc(row.actor)}</td>
-            <td>${esc(row.action)}</td>
-            <td>${esc((row.entity_id || '').split(':')[0].slice(0, 8))}</td>
-            <td>${detail}</td>
+            <td class="actor-${esc(row.actor)}" title="${row.actor === 'researcher' ? 'Action taken by the research team' : 'Action taken by the patient'}">${esc(row.actor)}</td>
+            <td title="${esc(row.action)}">${esc(ACTION_LABELS[row.action] || row.action)}</td>
+            <td class="mono" title="Full patient ID: ${esc(fullPatientId)}">${esc(shortId(fullPatientId))}</td>
+            <td title="Status before → status after this action">${detail}</td>
           </tr>
         `;
       }).join('');
       auditPanel.innerHTML = `
-        <div class="eyebrow group-label">Audit trail</div>
+        <div class="eyebrow group-label" title="A permanent, timestamped log of every invite, consent, and enrollment action for this trial — who did what, and when">Audit trail</div>
         <div style="overflow-x: auto;">
           <table class="audit-table">
-            <thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Patient</th><th>Transition</th></tr></thead>
+            <thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Patient</th><th>Status change</th></tr></thead>
             <tbody>${rows}</tbody>
           </table>
         </div>
@@ -1665,24 +1913,49 @@
     }
   }
 
-  tabCandidates.addEventListener('click', () => switchTab('candidates'));
+  let enrollmentPollTimer = null;
+
+  function stopEnrollmentPolling() {
+    if (enrollmentPollTimer) {
+      clearInterval(enrollmentPollTimer);
+      enrollmentPollTimer = null;
+    }
+  }
+
+  function startEnrollmentPolling() {
+    stopEnrollmentPolling();
+    enrollmentPollTimer = setInterval(() => {
+      if (currentNctId) pollEnrollmentStatus(currentNctId);
+    }, 4000);
+  }
+
+  tabCandidates.addEventListener('click', () => {
+    switchTab('candidates');
+    stopEnrollmentPolling();
+  });
   tabProgress.addEventListener('click', () => {
     switchTab('progress');
+    stopEnrollmentPolling();
     if (currentNctId && progressLoadedFor !== currentNctId) {
       loadProgress(currentNctId);
     }
   });
   tabEnrollment.addEventListener('click', () => {
     switchTab('enrollment');
-    if (currentNctId && enrollmentLoadedFor !== currentNctId) {
-      loadEnrollment(currentNctId, false);
-    }
+    // Patient-side actions (consent, decline...) happen out-of-band in the
+    // patient portal, so re-fetch status + the audit trail every time this
+    // tab is opened -- not just the first time for this trial -- and keep
+    // polling while it's the active tab so accepted consent shows up here
+    // without the researcher having to leave and re-enter the tab.
+    loadEnrollment(currentNctId, enrollmentLoadedFor === currentNctId);
+    startEnrollmentPolling();
   });
 
   loadBtn.addEventListener('click', loadTrial);
   nctInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') loadTrial();
   });
+  wireExampleButton();
 </script>
 
 </body>
