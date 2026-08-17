@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>TriMatch Pro AI — Upload Lab Report</title>
+<style>
+  :root {
+    --bg: #0C0D0F;
+    --panel: #141619;
+    --panel-2: #1A1D21;
+    --text: #E6E7E9;
+    --muted: #8A8F98;
+    --muted-2: #5D6169;
+    --line: #22252A;
+    --accent: #5B8DB8;
+    --accent-dim: rgba(91, 141, 184, 0.14);
+    --pass: #7BA786;
+    --pass-dim: rgba(123, 167, 134, 0.14);
+    --fail: #C06A5F;
+    --fail-dim: rgba(192, 106, 95, 0.14);
+    --unknown: #BCA274;
+    --unknown-dim: rgba(188, 162, 116, 0.14);
+    --radius: 3px;
+    --font-ui: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+    --ease: 140ms ease;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 14px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .mono { font-family: var(--font-mono); }
+
+  /* ---------- Session bar (shared shell) ---------- */
+
+  .session-bar {
+    border-bottom: 1px solid var(--line);
+    padding: 0.85rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .session-left { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+  .brand { font-weight: 600; font-size: 15px; letter-spacing: 0.01em; }
+  .brand .dim { color: var(--muted); font-weight: 400; }
+
+  .home-link {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--text);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 0.2rem 0.3rem 0.2rem 0.1rem;
+    border-radius: var(--radius);
+    transition: color var(--ease);
+  }
+  .home-link:hover { color: var(--accent); }
+  .home-mark { color: var(--pass); }
+
+  .crumb-sep { color: var(--muted-2); font-size: 12px; }
+
+  .crumb-link {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 13px;
+  }
+  .crumb-link:hover { color: var(--text); }
+
+  .role-badge {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.5rem;
+    border-radius: var(--radius);
+  }
+  .role-badge.role-patient { background: var(--pass-dim); color: var(--pass); }
+
+  .session-name { color: var(--muted); font-size: 13px; }
+
+  .signout-btn {
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 0.4rem 0.8rem;
+    color: var(--muted);
+    font-size: 12.5px;
+    cursor: pointer;
+    transition: border-color var(--ease), color var(--ease);
+  }
+  .signout-btn:hover { border-color: var(--muted-2); color: var(--text); }
+
+  /* ---------- Body ---------- */
+
+  main {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 2.25rem 1.5rem 3rem;
+  }
+
+  .page-title { font-size: 19px; font-weight: 600; margin: 0 0 0.3rem; }
+  .page-sub { color: var(--muted); font-size: 13.5px; margin: 0 0 1.75rem; max-width: 56ch; }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.4rem;
+    margin-bottom: 1.25rem;
+  }
+
+  label {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted-2);
+    margin-bottom: 0.6rem;
+  }
+
+  textarea {
+    width: 100%;
+    min-height: 190px;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    line-height: 1.6;
+    padding: 0.85rem;
+    resize: vertical;
+    transition: border-color var(--ease);
+  }
+  textarea:focus { border-color: var(--accent); }
+  textarea::placeholder { color: var(--muted-2); }
+
+  .panel-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: 0.9rem;
+    flex-wrap: wrap;
+  }
+
+  .sample-btn {
+    background: transparent;
+    border: none;
+    color: var(--accent);
+    font-size: 12.5px;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: none;
+  }
+  .sample-btn:hover { text-decoration: underline; }
+
+  .btn {
+    padding: 0.65rem 1.1rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    background: var(--accent-dim);
+    color: var(--accent);
+    cursor: pointer;
+    font-size: 13.5px;
+    font-weight: 600;
+    transition: border-color var(--ease), background var(--ease), color var(--ease);
+  }
+  .btn:hover { background: rgba(91, 141, 184, 0.24); }
+  .btn:disabled { opacity: 0.5; cursor: default; }
+
+  .status-line {
+    font-size: 12.5px;
+    color: var(--muted);
+    margin-top: 0.75rem;
+  }
+  .status-line.error { color: var(--fail); }
+
+  /* ---------- Results ---------- */
+
+  .results-panel { display: none; }
+  .results-panel.show { display: block; }
+
+  .results-headline {
+    font-weight: 600;
+    font-size: 14.5px;
+    color: var(--pass);
+    margin-bottom: 0.3rem;
+  }
+
+  .results-source {
+    font-size: 12.5px;
+    color: var(--muted);
+    margin-bottom: 1rem;
+  }
+  .results-source .mono { color: var(--text); }
+
+  .lab-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: baseline;
+    gap: 0.75rem;
+    padding: 0.6rem 0;
+    border-top: 1px solid var(--line);
+  }
+  .lab-row:first-of-type { border-top: none; }
+
+  .lab-name { font-size: 13px; }
+  .lab-code {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--muted-2);
+    margin-left: 0.4rem;
+  }
+  .lab-value { font-family: var(--font-mono); font-size: 14px; text-align: right; }
+  .lab-unit { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); text-align: right; min-width: 5.5rem; }
+
+  .flag-note {
+    display: inline-block;
+    margin-top: 0.15rem;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--unknown);
+    background: var(--unknown-dim);
+    padding: 0.1rem 0.4rem;
+    border-radius: var(--radius);
+  }
+
+  .dropped-note {
+    font-size: 12px;
+    color: var(--unknown);
+    margin-top: 0.9rem;
+  }
+
+  .again-link {
+    display: inline-block;
+    margin-top: 1.1rem;
+    color: var(--accent);
+    font-size: 12.5px;
+    text-decoration: none;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+  }
+  .again-link:hover { text-decoration: underline; }
+
+  .footnote {
+    color: var(--muted-2);
+    font-size: 11px;
+    margin-top: 2rem;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<div class="session-bar">
+  <div class="session-left">
+    <a class="home-link" href="index.html" title="Back to the TriMatch home page"><span class="home-mark">◆</span> TriMatch</a>
+    <span class="crumb-sep">›</span>
+    <a class="crumb-link" href="patient-home.html">Patient Portal</a>
+    <span class="crumb-sep">›</span>
+    <span class="role-badge role-patient">Upload lab report</span>
+    <span class="session-name" id="sessionName"></span>
+  </div>
+  <button class="signout-btn" id="signoutBtn">Sign out</button>
+</div>
+
+<main>
+  <div class="page-title">Upload a lab report</div>
+  <div class="page-sub">Paste the text of a lab report below. We'll read it, pull out the individual test results, and add them to your record — each one linked back to this upload so it stays traceable.</div>
+
+  <div class="panel">
+    <label for="reportText">Lab report text</label>
+    <textarea id="reportText" placeholder="Paste your lab report text here…"></textarea>
+    <div class="panel-actions">
+      <button type="button" class="sample-btn" id="fillSampleBtn">Use a sample report</button>
+      <button type="button" class="btn" id="submitBtn">Extract &amp; add to my record</button>
+    </div>
+    <div class="status-line" id="statusLine"></div>
+  </div>
+
+  <div class="panel results-panel" id="resultsPanel">
+    <div class="results-headline" id="resultsHeadline"></div>
+    <div class="results-source" id="resultsSource"></div>
+    <div id="labList"></div>
+    <div class="dropped-note" id="droppedNote" style="display:none;"></div>
+    <button type="button" class="again-link" id="uploadAnotherBtn">Upload another report</button>
+  </div>
+
+  <div class="footnote">This is a prototype for demonstration — extracted values are synthetic and not medical advice.</div>
+</main>
+
+<script>
+  const patientId = sessionStorage.getItem('tm_patient_id');
+  const patientName = sessionStorage.getItem('tm_patient_name');
+
+  if (!patientId) {
+    window.location.href = 'patient-login.html';
+  }
+
+  document.getElementById('sessionName').textContent = patientName || '';
+  document.getElementById('signoutBtn').addEventListener('click', () => {
+    sessionStorage.removeItem('tm_patient_name');
+    sessionStorage.removeItem('tm_patient_id');
+    window.location.href = 'index.html';
+  });
+
+  function esc(str) {
+    if (str === null || str === undefined) return '';
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  const SAMPLE_REPORT = `Quest Diagnostics — Report Date: 2026-08-05
+
+Glycated Haemoglobin (HbA1c): 6.1 %
+Estimated GFR: 72 mL/min
+ALT: 34 U/L
+AST: 29 U/L
+Total Cholesterol: 188 mg/dL
+
+Comments: Patient advised to continue current diet and follow up in 3 months.`;
+
+  document.getElementById('fillSampleBtn').addEventListener('click', () => {
+    document.getElementById('reportText').value = SAMPLE_REPORT;
+  });
+
+  const textarea = document.getElementById('reportText');
+  const submitBtn = document.getElementById('submitBtn');
+  const statusLine = document.getElementById('statusLine');
+  const resultsPanel = document.getElementById('resultsPanel');
+  const resultsHeadline = document.getElementById('resultsHeadline');
+  const resultsSource = document.getElementById('resultsSource');
+  const labList = document.getElementById('labList');
+  const droppedNote = document.getElementById('droppedNote');
+
+  function formatDate(iso) {
+    if (!iso) return '';
+    return iso.slice(0, 10);
+  }
+
+  submitBtn.addEventListener('click', async () => {
+    const text = textarea.value.trim();
+    if (!text) {
+      statusLine.textContent = 'Paste a lab report first.';
+      statusLine.classList.add('error');
+      return;
+    }
+
+    statusLine.classList.remove('error');
+    statusLine.textContent = 'Reading your report and extracting values…';
+    submitBtn.disabled = true;
+    resultsPanel.classList.remove('show');
+
+    try {
+      const res = await fetch(`/patients/${encodeURIComponent(patientId)}/upload-lab`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        statusLine.textContent = data.detail || 'Could not process this report.';
+        statusLine.classList.add('error');
+        submitBtn.disabled = false;
+        return;
+      }
+
+      statusLine.textContent = '';
+      submitBtn.disabled = false;
+
+      if (!data.extracted.length) {
+        resultsHeadline.textContent = 'No lab values found';
+        resultsHeadline.style.color = 'var(--unknown)';
+        resultsSource.innerHTML = `We couldn't find any recognizable lab results in that text. Try pasting the full report, including test names and values.`;
+        labList.innerHTML = '';
+        droppedNote.style.display = 'none';
+        resultsPanel.classList.add('show');
+        return;
+      }
+
+      resultsHeadline.textContent = `Extracted ${data.extracted.length} lab value${data.extracted.length === 1 ? '' : 's'} and added to your record`;
+      resultsHeadline.style.color = 'var(--pass)';
+      resultsSource.innerHTML = `source: <span class="mono">${esc(data.document_name)}</span> · document #${esc(data.document_id)}`;
+
+      labList.innerHTML = data.extracted.map(lab => `
+        <div class="lab-row">
+          <div>
+            <span class="lab-name">${esc(lab.test_name)}</span><span class="lab-code">${esc(lab.test_code)}</span>
+            ${lab.flagged_unmapped ? '<div class="flag-note" title="This test does not match one of our standard codes yet -- stored as-is, flagged for review.">unmapped code</div>' : ''}
+          </div>
+          <div class="lab-value mono">${esc(lab.value)}</div>
+          <div class="lab-unit">${esc(lab.unit || '')} · ${esc(formatDate(lab.test_date))}</div>
+        </div>
+      `).join('');
+
+      if (data.dropped_count > 0) {
+        droppedNote.style.display = 'block';
+        droppedNote.textContent = `${data.dropped_count} line${data.dropped_count === 1 ? '' : 's'} in your report couldn't be read as a lab value and ${data.dropped_count === 1 ? 'was' : 'were'} skipped.`;
+      } else {
+        droppedNote.style.display = 'none';
+      }
+
+      resultsPanel.classList.add('show');
+    } catch (err) {
+      statusLine.textContent = 'Could not reach the server. Try again.';
+      statusLine.classList.add('error');
+      submitBtn.disabled = false;
+    }
+  });
+
+  document.getElementById('uploadAnotherBtn').addEventListener('click', () => {
+    textarea.value = '';
+    resultsPanel.classList.remove('show');
+    statusLine.textContent = '';
+    textarea.focus();
+  });
+</script>
+
+</body>
+</html>

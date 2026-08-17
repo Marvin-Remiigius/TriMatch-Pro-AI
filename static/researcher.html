@@ -320,6 +320,51 @@
     gap: 0.4rem;
   }
 
+  /* Trial Progress tab only: the patient list scrolls in place instead of
+     the whole page, since it can run to hundreds of enrolled patients. The
+     metrics area above it (donut + cohort chart) stays put. */
+  #progressPanel {
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: 0;
+    align-self: start;
+    max-height: 100vh;
+    overflow: hidden;
+  }
+
+  #progressPanel #metricsArea {
+    flex-shrink: 0;
+  }
+
+  #progressList {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+    margin-right: -0.5rem;
+    scrollbar-width: thin;
+    scrollbar-color: var(--muted-2) transparent;
+  }
+
+  #progressList::-webkit-scrollbar { width: 6px; }
+  #progressList::-webkit-scrollbar-track { background: transparent; }
+  #progressList::-webkit-scrollbar-thumb {
+    background: var(--muted-2);
+    border-radius: var(--radius);
+  }
+
+  @media (max-width: 880px) {
+    #progressPanel {
+      position: static;
+      max-height: none;
+      overflow: visible;
+    }
+    #progressList {
+      overflow-y: visible;
+    }
+  }
+
   .candidate {
     display: block;
     width: 100%;
@@ -1103,7 +1148,7 @@
 <div class="view" id="viewProgress">
   <div class="view-sub">Compares each enrolled patient's most recent lab results against their baseline (the values recorded when they were enrolled), so you can see who's trending better or worse.</div>
   <main class="workspace">
-    <section class="panel candidates-panel">
+    <section class="panel candidates-panel" id="progressPanel">
       <div id="metricsArea"></div>
       <div class="candidate-list" id="progressList"></div>
     </section>

@@ -188,6 +188,35 @@
     margin-top: 2rem;
     text-align: center;
   }
+
+  .upload-lab-cta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .upload-lab-cta-title { font-weight: 600; font-size: 13.5px; }
+  .upload-lab-cta-sub { color: var(--muted); font-size: 12.5px; margin-top: 0.15rem; }
+
+  .upload-lab-cta-btn {
+    flex-shrink: 0;
+    color: var(--accent);
+    background: var(--accent-dim);
+    border-radius: var(--radius);
+    padding: 0.5rem 0.9rem;
+    font-size: 12.5px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background var(--ease);
+  }
+  .upload-lab-cta-btn:hover { background: rgba(91, 141, 184, 0.24); }
 </style>
 </head>
 <body>
@@ -205,6 +234,13 @@
 <main>
   <div class="page-title">Your trial invitations</div>
   <div class="page-sub">Trials a research team has invited you to, or that you're currently part of. Open any invitation below to review the trial and respond.</div>
+  <div class="upload-lab-cta">
+    <div>
+      <div class="upload-lab-cta-title">Have a new lab report?</div>
+      <div class="upload-lab-cta-sub">Paste it in and we'll read the values into your record automatically.</div>
+    </div>
+    <a class="upload-lab-cta-btn" href="upload-lab.html">Upload lab report &rarr;</a>
+  </div>
   <div id="content" class="skeleton">Loading your trial invitations…</div>
   <div class="footnote">This is a prototype patient portal for demonstration.</div>
 </main>

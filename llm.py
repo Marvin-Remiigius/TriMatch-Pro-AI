@@ -229,6 +229,139 @@ is left uncaptured, so needs_review is false.
 """
 
 
+LAB_EXTRACTION_SYSTEM_PROMPT = """You are a clinical lab report extractor.
+
+Given raw free-text lab report content (which may mix formatting styles,
+abbreviations, and units), extract every individual lab test result you can
+find as one JSON object per result.
+
+Each element:
+{
+  "test_name": "<the lab test's name as written in the report>",
+  "test_code": "<one of HBA1C, EGFR, ALT, AST, CHOL, GLU, CREAT, HGB, WBC if
+    the test clearly matches one of these -- else null>",
+  "value": <the numeric result, a number, never a string>,
+  "unit": "<the reported unit, or null if none given>",
+  "test_date": "<the report/collection date as YYYY-MM-DD if one is present
+    in the text, else null>"
+}
+
+Map these common synonyms to test_code (case-insensitive, match on meaning
+not exact wording):
+- Hemoglobin A1c / HbA1c / glycated hemoglobin / glycated haemoglobin / A1c -> HBA1C
+- eGFR / estimated GFR / estimated glomerular filtration rate -> EGFR
+- ALT / alanine aminotransferase / SGPT -> ALT
+- AST / aspartate aminotransferase / SGOT -> AST
+- Total Cholesterol / Cholesterol -> CHOL
+- Glucose / fasting glucose / blood glucose -> GLU
+- Creatinine / serum creatinine -> CREAT
+- Hemoglobin (plain, NOT A1c) -> HGB
+- WBC / white blood cell count / leukocyte count -> WBC
+
+If a lab result is real but doesn't match any of the codes above, still
+include it with "test_code": null and its literal test_name -- do not drop
+it just because it's uncoded.
+
+If a value is ambiguous, not actually numeric, or the line doesn't describe
+an actual lab test result (e.g. patient demographics, a header, free-text
+notes, a doctor's name), SKIP it entirely -- do not guess a value or invent
+a result that isn't really there.
+
+Return ONLY a JSON array of these objects, no prose, no markdown fences. If
+nothing in the text is a lab result, return an empty array: []
+"""
+
+
+def _strip_markdown_fences(text: str) -> str:
+    stripped = text.strip()
+    if not stripped.startswith("```"):
+        return stripped
+    lines = stripped.split("\n")
+    if lines and lines[0].startswith("```"):
+        lines = lines[1:]
+    if lines and lines[-1].strip().startswith("```"):
+        lines = lines[:-1]
+    return "\n".join(lines).strip()
+
+
+def extract_lab_values(raw_text: str) -> dict:
+    """Sends free-text lab report content to the same Gemini client/model
+    the criteria parser uses (same call shape: text in, strict JSON out).
+    Parses defensively -- strips markdown fences, retries once on bad JSON,
+    and drops individually malformed entries rather than failing the whole
+    extraction. Returns {"items": [...], "dropped_count": int, "error":
+    str | None}; items is always a list (possibly empty), never raises."""
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        return {"items": [], "dropped_count": 0, "error": "GEMINI_API_KEY is not configured"}
+
+    client = genai.Client(api_key=api_key)
+
+    parsed = None
+    last_error = None
+    for _ in range(2):  # one retry on malformed JSON, per the brief
+        try:
+            response = client.models.generate_content(
+                model=MODEL,
+                contents=raw_text,
+                config=types.GenerateContentConfig(
+                    system_instruction=LAB_EXTRACTION_SYSTEM_PROMPT,
+                    response_mime_type="application/json",
+                    temperature=0,
+                ),
+            )
+        except Exception as exc:
+            last_error = f"LLM call failed: {exc}"
+            continue
+
+        try:
+            parsed = json.loads(_strip_markdown_fences(response.text))
+            last_error = None
+            break
+        except (json.JSONDecodeError, TypeError) as exc:
+            last_error = f"LLM returned malformed JSON: {exc}"
+            parsed = None
+            continue
+
+    if parsed is None:
+        return {"items": [], "dropped_count": 0, "error": last_error}
+
+    if not isinstance(parsed, list):
+        return {"items": [], "dropped_count": 0, "error": "LLM response was not a JSON array"}
+
+    items = []
+    dropped = 0
+    for entry in parsed:
+        if not isinstance(entry, dict):
+            dropped += 1
+            continue
+        name = entry.get("test_name")
+        if not isinstance(name, str) or not name.strip():
+            dropped += 1
+            continue
+        try:
+            value = float(entry.get("value"))
+        except (TypeError, ValueError):
+            dropped += 1
+            continue
+        test_date = entry.get("test_date")
+        if not isinstance(test_date, str) or not test_date.strip():
+            test_date = None
+        code = entry.get("test_code")
+        unit = entry.get("unit")
+        items.append(
+            {
+                "test_name": name.strip(),
+                "test_code": code.strip() if isinstance(code, str) and code.strip() else None,
+                "value": value,
+                "unit": unit.strip() if isinstance(unit, str) and unit.strip() else None,
+                "test_date": test_date,
+            }
+        )
+
+    return {"items": items, "dropped_count": dropped, "error": None}
+
+
 def _fallback_criterion(raw_text: str, reason: str) -> Criterion:
     return Criterion(
         id="c1",

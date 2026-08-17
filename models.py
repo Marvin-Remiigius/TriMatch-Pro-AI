@@ -266,6 +266,36 @@ class AuditLogRow(BaseModel):
     created_at: str
 
 
+class ExtractedLabValue(BaseModel):
+    """One lab value pulled from an uploaded free-text report and written
+    into the existing `lab_results` table -- the row it maps to is cited
+    by `lab_result_id` so the value stays traceable to the source upload."""
+    lab_result_id: int
+    test_code: str
+    test_name: str
+    value: float
+    unit: Optional[str] = None
+    test_date: Optional[str] = None
+    # True when the LLM's test name/code didn't match our existing
+    # test_code convention -- the value is still stored (never dropped),
+    # just flagged so a reviewer knows it isn't one of the canonical codes.
+    flagged_unmapped: bool = False
+
+
+class UploadLabRequest(BaseModel):
+    text: str
+
+
+class UploadLabResponse(BaseModel):
+    patient_id: str
+    document_id: int
+    document_name: str
+    document_date: Optional[str] = None
+    extracted: list[ExtractedLabValue]
+    dropped_count: int
+    llm_error: Optional[str] = None
+
+
 class LabResultRecord(BaseModel):
     """Full source lab_results row -- for source data verification: lets
     the dashboard fetch and display the exact record a verdict cited,

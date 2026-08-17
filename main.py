@@ -1,8 +1,10 @@
 import json
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from postgrest.exceptions import APIError
 
 from audit import get_audit_log, get_flagged_for_review, log_match_results
 from coarse_filter import coarse_filter_patient_ids
@@ -19,6 +21,7 @@ from enrollment import (
     list_trial_audit,
     withdraw_patient,
 )
+from lab_upload import ingest_lab_report
 from llm import parse_criteria
 from matching import match_patient
 from models import (
@@ -40,6 +43,8 @@ from models import (
     Patient,
     TrialCriterionRow,
     TrialProgressResponse,
+    UploadLabRequest,
+    UploadLabResponse,
 )
 from patients import get_patient, load_patients
 from progress import compute_trial_progress, store_trial_metrics
@@ -48,6 +53,20 @@ from trials import fetch_trial, to_trial_row
 load_dotenv()
 
 app = FastAPI()
+
+
+@app.exception_handler(APIError)
+def handle_postgrest_api_error(request: Request, exc: APIError):
+    """Postgrest raises when a query filter can't even be parsed by
+    Postgres -- e.g. a truncated/malformed patient_id sent as a uuid
+    filter (code 22P02). That's functionally "no such record", not a
+    server failure, so surface it as a 404 with a JSON body instead of
+    an unhandled 500 with a plain-text body (which breaks every
+    frontend `await res.json()` call and shows up as a generic
+    "could not reach the server" error)."""
+    if exc.code == "22P02":
+        return JSONResponse(status_code=404, content={"detail": "Patient not found"})
+    return JSONResponse(status_code=502, content={"detail": exc.message or "Database error"})
 
 
 @app.get("/health")
@@ -377,6 +396,27 @@ def get_patient_by_id(patient_id: str):
     if patient is None:
         raise HTTPException(status_code=404, detail=f"Patient {patient_id} not found")
     return patient
+
+
+@app.post("/patients/{patient_id}/upload-lab", response_model=UploadLabResponse)
+def upload_lab_report(patient_id: str, request: UploadLabRequest):
+    """Patient-portal lab report upload -> AI extraction (step 9, source
+    data verification): pasted free-text goes to the same Gemini client the
+    criteria parser uses, gets extracted into structured lab values, and
+    each one is written into the existing lab_results table citing the
+    patient_documents row created for this upload. No schema change."""
+    if not request.text.strip():
+        raise HTTPException(status_code=400, detail="text must not be empty")
+
+    client = get_client()
+    patient_check = (
+        client.table("patients").select("patient_id").eq("patient_id", patient_id).limit(1).execute()
+    )
+    if not patient_check.data:
+        raise HTTPException(status_code=404, detail=f"Patient {patient_id} not found")
+
+    result = ingest_lab_report(client, patient_id, request.text)
+    return UploadLabResponse(patient_id=patient_id, **result)
 
 
 @app.post("/parse-criteria", response_model=ParseCriteriaResponse)
