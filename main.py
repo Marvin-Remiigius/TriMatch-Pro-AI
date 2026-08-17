@@ -31,6 +31,7 @@ from models import (
     DBCandidateSummary,
     EnrollmentRecord,
     ImportTrialResponse,
+    LabResultRecord,
     MatchRequest,
     MatchResponse,
     ParseCriteriaRequest,
@@ -208,6 +209,19 @@ def match_db_patient(nct_id: str, patient_id: str):
 
     overall, results = match_patient_db(client, patient_id, nct_id, criteria_rows=criteria_rows)
     return MatchResponse(patient_id=patient_id, overall=overall, results=results)
+
+
+@app.get("/lab-results/{lab_result_id}", response_model=LabResultRecord)
+def get_lab_result(lab_result_id: int):
+    """Source data verification: fetches the exact lab_results row a
+    match verdict's source_lab_result_id cites, so a reviewer can confirm
+    the value/reference range/test date behind an automated decision --
+    not just trust an ID. Read-only, no schema change."""
+    client = get_client()
+    res = client.table("lab_results").select("*").eq("lab_result_id", lab_result_id).limit(1).execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail=f"Lab result {lab_result_id} not found")
+    return res.data[0]
 
 
 _MAX_EVALUATE_DEFAULT = 200

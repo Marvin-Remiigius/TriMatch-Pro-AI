@@ -1080,15 +1080,66 @@ reads as one product with two portals instead of a set of loose pages.
   patient ID, across two different trials) -> existing consent page
   loads with its full enrolled-patient progress view intact.
 
+## Source data verification (SDV) feature (2026-08-17) — DONE
+
+The original problem statement named four capabilities: "automate patient
+screening, compliance monitoring, source data verification, and clinical
+trial documentation." Three already had a clear demo story (screening =
+the matcher, compliance = `unknown` verdicts, documentation = the audit
+log). SDV was technically present -- `match_results.source_lab_result_id`
+has been a real citation since the compound-criteria work, literally
+commented `-- the citation` in the migration -- but only rendered as
+inert text (`source lab_result #1842`), and per-sub-rule citations on
+compound criteria (`rule_results[].source_lab_result_id`) were returned
+by the API but never rendered at all. Turned it into a real, clickable
+verification action instead of an implicit design detail.
+
+- **New read-only endpoint**: `GET /lab-results/{lab_result_id}`
+  (`main.py` + `LabResultRecord` in `models.py`) returns the full source
+  row -- test name/code, value, unit, reference range, abnormal flag,
+  test date, system entry date, lab report ID. No schema change (reads
+  the existing table); 404s cleanly for an unknown ID.
+- **`static/researcher.html` only, additive**: the existing
+  `source lab_result #X` text is now also a "Verify source →" button.
+  Clicking it fetches the real record and expands a panel showing every
+  field above, plus a genuine integrity check -- it compares the
+  freshly-fetched value against the `patient_value` the verdict actually
+  used and shows a clear "✓ Verified" or "⚠ Mismatch" line. Not a details
+  toggle; an actual verification.
+- **Per-sub-rule citations, previously invisible, now shown**: compound/
+  `rule_groups` criteria (e.g. NCT04791358's "Evidence of DKD Stages 1-3"
+  eGFR-OR-UACR criterion) get a new "Path N: field op value (patient:
+  ...)" breakdown per sub-rule, each independently verifiable. Confirmed
+  live: patient 003be4ad's Path 1 `lab.egfr >= 30` verifies against real
+  lab_result #2358 (24.7894, correctly flagged abnormal, real reference
+  range 90-120) with a ✓ Verified match; the UACR sub-rule correctly
+  shows no verify button at all, since it has no `source_lab_result_id`
+  (no UACR data exists) -- same "never guess, never fabricate a citation
+  that doesn't exist" principle as everywhere else in this project.
+- Verified live: single-rule criteria (TM-METABOLIC-001's eGFR/HbA1c),
+  compound rule_groups criteria (NCT04791358's eGFR range), and
+  no-citation criteria (`needs_review`, fully unstructured) all render
+  correctly with zero crashes. Direct navigation to `researcher.html`
+  (no login) still works, confirming the session-bar wrapper is
+  unaffected.
+- Full regression: `/health`, `/patients`, existing trial candidate
+  matching (byte-identical: NCT04280705 still shows the same 1 pass/1
+  fail/11 unknown pattern), `/trials/*/progress`, `/trials/*/enrollment`,
+  `/trials/*/audit`, `consent.html`, `researcher.html`, landing page all
+  still 200. No matcher, consent state machine, or audit logging code
+  touched.
+
 ## Demo narrative (what to show judges)
 1. Paste a real trial's messy eligibility text → watch it become clean rules.
 2. Show a ranked list of patients for that trial.
 3. Expand one patient → every criterion with pass/fail/unknown + why.
 4. Point out an `unknown` and explain: the system flags missing data instead
    of guessing — the coordinator decides. That's the compliance story.
-5. (Phase 2) Point at `match_results.source_lab_result_id` and explain: every
-   verdict cites the exact lab row that justified it, not just a reason
-   string — that's source data verification, not just an audit note.
+5. (Phase 2) Click "Verify source →" on a lab-based criterion — the real
+   `lab_results` row opens (reference range, abnormal flag, test date,
+   lab report ID) with a live ✓ Verified check against the value the
+   verdict used. That's source data verification as a real action, not
+   just a citation in a reason string.
 6. Show `NCT04280705`'s "Male or non-pregnant female adult >= 18" criterion:
    the age part is a real, evaluated rule (different verdict per patient);
    the sex/pregnancy OR part stays honestly flagged instead of guessed or

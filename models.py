@@ -264,3 +264,22 @@ class AuditLogRow(BaseModel):
     source_ref: Optional[str] = None
     detail: Optional[dict] = None
     created_at: str
+
+
+class LabResultRecord(BaseModel):
+    """Full source lab_results row -- for source data verification: lets
+    the dashboard fetch and display the exact record a verdict cited,
+    not just its ID."""
+    lab_result_id: int
+    patient_id: str
+    test_name: str
+    test_code: str
+    value: float
+    unit: Optional[str] = None
+    reference_min: Optional[float] = None
+    reference_max: Optional[float] = None
+    test_date: Optional[str] = None
+    abnormal_flag: Optional[bool] = None
+    lab_report_id: Optional[str] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None

@@ -437,6 +437,84 @@
     margin-top: 0.4rem;
   }
 
+  .verify-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .verify-btn:hover { color: var(--text); }
+  .verify-btn:disabled { color: var(--muted-2); cursor: default; text-decoration: none; }
+
+  .verify-panel {
+    margin-top: 0.6rem;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 0.75rem 0.9rem;
+    font-size: 12px;
+  }
+
+  .verify-panel .verify-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.2rem 0;
+    font-family: var(--font-mono);
+  }
+
+  .verify-panel .verify-row .k { color: var(--muted-2); }
+  .verify-panel .verify-row .v { color: var(--text); text-align: right; }
+  .verify-panel .verify-row .v.abnormal { color: var(--fail); }
+
+  .verify-status {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--line);
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+  }
+
+  .verify-status.ok { color: var(--pass); }
+  .verify-status.mismatch { color: var(--fail); }
+
+  .rule-breakdown {
+    margin-top: 0.6rem;
+    padding-left: 0.85rem;
+    border-left: 2px solid var(--line);
+  }
+
+  .rule-row {
+    padding: 0.45rem 0;
+    border-top: 1px solid var(--line);
+    font-size: 12px;
+  }
+
+  .rule-row:first-child { border-top: none; }
+
+  .rule-row .rule-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.75rem;
+    font-family: var(--font-mono);
+    color: var(--muted);
+  }
+
+  .rule-row .rule-group-label {
+    color: var(--muted-2);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 10px;
+    margin-right: 0.5rem;
+  }
+
   .skeleton {
     color: var(--muted-2);
     font-size: 12.5px;
@@ -1006,7 +1084,35 @@
       const inclusions = data.results.filter(r => r.type === 'inclusion');
       const exclusions = data.results.filter(r => r.type === 'exclusion');
 
-      const renderCriterion = (r) => `
+      const verifyButton = (labResultId, patientValue, panelId) => {
+        if (labResultId === null || labResultId === undefined) return '';
+        const expected = JSON.stringify(patientValue === undefined ? null : patientValue);
+        return `<button class="verify-btn" data-lab-id="${esc(labResultId)}" data-expected='${esc(expected)}' data-panel="${panelId}">Verify source &rarr;</button>`;
+      };
+
+      const renderRuleBreakdown = (r) => {
+        if (!r.rule_results || !r.rule_results.length) return '';
+        const rows = r.rule_results.map((rr, i) => {
+          const panelId = `verify-${esc(r.id)}-${i}`;
+          const groupLabel = (rr.group !== null && rr.group !== undefined)
+            ? `<span class="rule-group-label">Path ${rr.group + 1}</span>` : '';
+          return `
+            <div class="rule-row">
+              <div class="rule-head">
+                <span>${groupLabel}${esc(rr.field)} ${esc(rr.operator)} ${esc(rr.value)}
+                  <span class="kv-value">(patient: ${esc(rr.patient_value)})</span></span>
+                ${verifyButton(rr.source_lab_result_id, rr.patient_value, panelId)}
+              </div>
+              <div id="${panelId}"></div>
+            </div>
+          `;
+        }).join('');
+        return `<div class="rule-breakdown">${rows}</div>`;
+      };
+
+      const renderCriterion = (r) => {
+        const topPanelId = `verify-${esc(r.id)}`;
+        return `
         <div class="criterion">
           <div class="criterion-top">
             <div class="criterion-text">${esc(r.text)}</div>
@@ -1014,11 +1120,14 @@
           </div>
           <div class="criterion-meta">
             ${r.patient_value !== null && r.patient_value !== undefined ? `<span><span class="kv-label">value </span><span class="kv-value">${esc(Array.isArray(r.patient_value) ? r.patient_value.join(', ') : r.patient_value)}</span></span>` : ''}
-            ${r.source_lab_result_id !== null && r.source_lab_result_id !== undefined ? `<span><span class="kv-label">source </span><span class="kv-value">lab_result #${esc(r.source_lab_result_id)}</span></span>` : ''}
+            ${r.source_lab_result_id !== null && r.source_lab_result_id !== undefined ? `<span><span class="kv-label">source </span><span class="kv-value">lab_result #${esc(r.source_lab_result_id)}</span></span> ${verifyButton(r.source_lab_result_id, r.patient_value, topPanelId)}` : ''}
           </div>
           <div class="criterion-reason">${esc(r.reason)}</div>
+          <div id="${topPanelId}"></div>
+          ${renderRuleBreakdown(r)}
         </div>
       `;
+      };
 
       detailPanel.innerHTML = `
         <div class="detail-header">
@@ -1032,6 +1141,56 @@
       detailPanel.innerHTML = '<div class="detail-empty">Could not reach the server. Try again.</div>';
     }
   }
+
+  // Source data verification: fetches the real lab_results row a verdict
+  // cited and confirms it against the value the verdict actually used --
+  // delegated on detailPanel since criteria are re-rendered per candidate.
+  detailPanel.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.verify-btn');
+    if (!btn) return;
+
+    const panel = document.getElementById(btn.dataset.panel);
+    if (!panel) return;
+
+    let expectedRaw = null;
+    try { expectedRaw = JSON.parse(btn.dataset.expected); } catch (err) { /* leave null */ }
+    const expectedValues = Array.isArray(expectedRaw) ? expectedRaw : [expectedRaw];
+
+    btn.disabled = true;
+    panel.innerHTML = '<div class="verify-panel">Loading source record…</div>';
+
+    try {
+      const res = await fetch(`/lab-results/${encodeURIComponent(btn.dataset.labId)}`);
+      const data = await res.json();
+      if (!res.ok) {
+        panel.innerHTML = `<div class="verify-panel">${esc(data.detail || 'Could not load source record.')}</div>`;
+        btn.disabled = false;
+        return;
+      }
+
+      const actualNum = parseFloat(data.value);
+      const comparable = expectedValues.filter(v => v !== null && v !== undefined && !isNaN(parseFloat(v)));
+      const matches = comparable.some(v => Math.abs(parseFloat(v) - actualNum) < 1e-6);
+      const hasRange = data.reference_min !== null && data.reference_min !== undefined
+        && data.reference_max !== null && data.reference_max !== undefined;
+
+      panel.innerHTML = `
+        <div class="verify-panel">
+          <div class="verify-row"><span class="k">test</span><span class="v">${esc(data.test_name)} (${esc(data.test_code)})</span></div>
+          <div class="verify-row"><span class="k">value</span><span class="v${data.abnormal_flag ? ' abnormal' : ''}">${esc(data.value)}${data.unit ? ' ' + esc(data.unit) : ''}${data.abnormal_flag ? ' — abnormal' : ''}</span></div>
+          ${hasRange ? `<div class="verify-row"><span class="k">reference range</span><span class="v">${esc(data.reference_min)} – ${esc(data.reference_max)}</span></div>` : ''}
+          <div class="verify-row"><span class="k">test date</span><span class="v">${esc((data.test_date || '').replace('T', ' ').slice(0, 19)) || '—'}</span></div>
+          <div class="verify-row"><span class="k">entered into system</span><span class="v">${esc((data.created_at || '').replace('T', ' ').slice(0, 19)) || '—'}</span></div>
+          <div class="verify-row"><span class="k">lab report</span><span class="v">${esc(data.lab_report_id) || '—'}</span></div>
+          ${comparable.length ? `<div class="verify-status ${matches ? 'ok' : 'mismatch'}">${matches ? '✓ Verified — matches the value this verdict used' : '⚠ Mismatch — source value differs from what the verdict used'}</div>` : ''}
+        </div>
+      `;
+      btn.remove();
+    } catch (err) {
+      panel.innerHTML = '<div class="verify-panel">Could not reach the server. Try again.</div>';
+      btn.disabled = false;
+    }
+  });
 
   function devClass(status) {
     return 'dev-' + status;
