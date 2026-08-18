@@ -4,27 +4,33 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>TriMatch Pro AI — Researcher</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0C0D0F;
-    --panel: #141619;
-    --panel-2: #1A1D21;
-    --text: #E6E7E9;
-    --muted: #8A8F98;
-    --muted-2: #5D6169;
-    --line: #22252A;
-    --accent: #5B8DB8;
-    --accent-dim: rgba(91, 141, 184, 0.14);
-    --pass: #7BA786;
-    --pass-dim: rgba(123, 167, 134, 0.14);
-    --fail: #C06A5F;
-    --fail-dim: rgba(192, 106, 95, 0.14);
-    --unknown: #BCA274;
-    --unknown-dim: rgba(188, 162, 116, 0.14);
-    --radius: 3px;
-    --font-ui: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --bg: #08090d;
+    --panel: rgba(16, 22, 36, 0.8);
+    --panel-2: rgba(22, 30, 50, 0.9);
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --muted-2: #64748b;
+    --line: rgba(99, 179, 237, 0.1);
+    --border: rgba(99, 179, 237, 0.12);
+    --accent: #63b3ed;
+    --accent-2: #7c3aed;
+    --accent-dim: rgba(99, 179, 237, 0.14);
+    --pass: #34d399;
+    --pass-dim: rgba(52, 211, 153, 0.14);
+    --fail: #fc8181;
+    --fail-dim: rgba(252, 129, 129, 0.14);
+    --unknown: #f6ad55;
+    --unknown-dim: rgba(246, 173, 85, 0.14);
+    --radius: 10px;
+    --radius-lg: 16px;
+    --font-ui: 'Inter', -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
-    --ease: 140ms ease;
+    --ease: 250ms cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   * { box-sizing: border-box; }
@@ -37,9 +43,9 @@
     margin: 0;
     background-color: var(--bg);
     background-image:
-      radial-gradient(560px circle at 95% -8%, rgba(91, 141, 184, 0.09), transparent 70%),
-      radial-gradient(420px circle at 0% 40%, rgba(91, 141, 184, 0.05), transparent 70%),
-      radial-gradient(600px circle at 50% 105%, rgba(91, 141, 184, 0.05), transparent 70%);
+      radial-gradient(680px circle at 95% -8%, rgba(99, 179, 237, 0.12), transparent 70%),
+      radial-gradient(520px circle at 0% 40%, rgba(124, 58, 237, 0.08), transparent 70%),
+      radial-gradient(720px circle at 50% 105%, rgba(52, 211, 153, 0.05), transparent 70%);
     background-attachment: fixed;
     background-repeat: no-repeat;
     color: var(--text);
@@ -100,6 +106,9 @@
     justify-content: space-between;
     gap: 1rem;
     flex-wrap: wrap;
+    background: rgba(8, 9, 13, 0.6);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
   }
 
   .session-left { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
@@ -159,6 +168,7 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 1rem 1.5rem;
+    background: rgba(8, 9, 13, 0.4);
   }
 
   .brand {
@@ -184,11 +194,12 @@
     border-radius: var(--radius);
     padding: 0.5rem 0.7rem;
     color: var(--text);
+    transition: border-color var(--ease), box-shadow var(--ease);
   }
 
   #nctInput::placeholder { color: var(--muted-2); }
 
-  #nctInput:focus-visible { border-color: var(--accent); }
+  #nctInput:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); outline: none; }
 
   #patientCountInput {
     width: 5.5rem;
@@ -199,24 +210,28 @@
     padding: 0.5rem 0.6rem;
     color: var(--text);
     font-family: var(--font-mono);
+    transition: border-color var(--ease), box-shadow var(--ease);
   }
 
   #patientCountInput::placeholder { color: var(--muted-2); }
 
-  #patientCountInput:focus-visible { border-color: var(--accent); }
+  #patientCountInput:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); outline: none; }
 
   #loadBtn {
-    background: transparent;
-    border: 1px solid var(--line);
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    border: none;
     border-radius: var(--radius);
-    padding: 0.5rem 0.95rem;
+    padding: 0.5rem 1.1rem;
     cursor: pointer;
-    transition: border-color var(--ease), color var(--ease), box-shadow var(--ease);
-    color: var(--text);
+    transition: opacity var(--ease), transform var(--ease);
+    color: white;
+    font-weight: 600;
+    letter-spacing: 0.01em;
   }
 
-  #loadBtn:hover { border-color: var(--muted); box-shadow: 0 0 14px rgba(91, 141, 184, 0.15); }
-  #loadBtn:disabled { color: var(--muted-2); cursor: default; }
+  #loadBtn:hover { opacity: 0.88; transform: translateY(-1px); }
+  #loadBtn:active { transform: translateY(0); }
+  #loadBtn:disabled { opacity: 0.4; cursor: default; transform: none; }
 
   .trial-info {
     display: flex;
@@ -257,14 +272,18 @@
 
   .upload-trial-toggle {
     background: transparent;
-    border: none;
-    color: var(--accent);
+    border: 1px dashed var(--muted-2);
+    border-radius: var(--radius);
+    color: var(--muted);
     font-size: 12.5px;
+    font-weight: 500;
     cursor: pointer;
-    padding: 0;
+    padding: 0.5rem 0.8rem;
     white-space: nowrap;
+    transition: border-color var(--ease), color var(--ease), background var(--ease);
   }
-  .upload-trial-toggle:hover { text-decoration: underline; }
+  .upload-trial-toggle:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+  .upload-trial-toggle.open { border-style: solid; border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
 
   .upload-trial-panel {
     display: none;
@@ -298,8 +317,8 @@
     cursor: pointer;
     transition: border-color var(--ease), color var(--ease), box-shadow var(--ease);
   }
-  .trial-file-drop:hover, .trial-file-drop.dragover { border-color: var(--accent); color: var(--text); box-shadow: 0 0 18px rgba(91, 141, 184, 0.12); }
-  .trial-file-drop.has-file { border-style: solid; border-color: var(--pass); color: var(--text); box-shadow: 0 0 14px rgba(123, 167, 134, 0.15); }
+  .trial-file-drop:hover, .trial-file-drop.dragover { border-color: var(--accent); color: var(--text); box-shadow: 0 0 18px rgba(99, 179, 237, 0.12); }
+  .trial-file-drop.has-file { border-style: solid; border-color: var(--pass); color: var(--text); box-shadow: 0 0 14px rgba(52, 211, 153, 0.15); }
   .trial-file-drop .mono { font-family: var(--font-mono); }
 
   .upload-trial-submit {
@@ -314,7 +333,7 @@
     white-space: nowrap;
     transition: background var(--ease), box-shadow var(--ease);
   }
-  .upload-trial-submit:hover { background: rgba(91, 141, 184, 0.24); box-shadow: 0 0 16px rgba(91, 141, 184, 0.25); }
+  .upload-trial-submit:hover { background: rgba(99, 179, 237, 0.24); box-shadow: 0 0 16px rgba(99, 179, 237, 0.25); }
   .upload-trial-submit:disabled { opacity: 0.5; cursor: default; box-shadow: none; }
 
   .upload-trial-sub {
@@ -371,6 +390,7 @@
 
   .candidates-panel {
     border-right: 1px solid var(--line);
+    background: rgba(8, 9, 13, 0.25);
   }
 
   @media (max-width: 880px) {
@@ -393,7 +413,7 @@
     color: var(--accent);
     line-height: 1.1;
     letter-spacing: -0.01em;
-    text-shadow: 0 0 18px rgba(91, 141, 184, 0.3);
+    text-shadow: 0 0 18px rgba(99, 179, 237, 0.3);
   }
 
   .funnel-figure .of {
@@ -487,20 +507,20 @@
     display: block;
     width: 100%;
     text-align: left;
-    background: var(--panel);
+    background: rgba(16, 22, 36, 0.6);
     border: 1px solid var(--line);
     border-radius: var(--radius);
     padding: 0.65rem 0.8rem;
     cursor: pointer;
-    transition: border-color var(--ease), background var(--ease), box-shadow var(--ease);
+    transition: border-color var(--ease), background var(--ease), box-shadow var(--ease), transform var(--ease);
   }
 
-  .candidate:hover { border-color: var(--muted-2); }
+  .candidate:hover { border-color: rgba(99, 179, 237, 0.35); background: rgba(99, 179, 237, 0.06); transform: translateX(2px); }
 
   .candidate.selected {
     border-color: var(--accent);
     background: var(--accent-dim);
-    box-shadow: 0 0 16px rgba(91, 141, 184, 0.15);
+    box-shadow: 0 0 16px rgba(99, 179, 237, 0.18);
   }
 
   .candidate-top {
@@ -746,9 +766,9 @@
   .tab-btn.active {
     color: var(--accent);
     background: var(--accent-dim);
-    border-color: rgba(91, 141, 184, 0.35);
+    border-color: rgba(99, 179, 237, 0.35);
     font-weight: 600;
-    box-shadow: 0 0 12px rgba(91, 141, 184, 0.15);
+    box-shadow: 0 0 12px rgba(99, 179, 237, 0.15);
   }
 
   .view { display: none; }
@@ -829,7 +849,7 @@
   .metric-figure.headline {
     font-size: 30px;
     color: var(--accent);
-    text-shadow: 0 0 18px rgba(91, 141, 184, 0.3);
+    text-shadow: 0 0 18px rgba(99, 179, 237, 0.3);
   }
 
   .metric-label {
@@ -874,7 +894,7 @@
   .patient-progress-row.selected {
     border-color: var(--accent);
     background: var(--accent-dim);
-    box-shadow: 0 0 16px rgba(91, 141, 184, 0.15);
+    box-shadow: 0 0 16px rgba(99, 179, 237, 0.15);
   }
 
   .ppr-top {
@@ -997,7 +1017,7 @@
     align-items: center;
     justify-content: center;
     position: relative;
-    filter: drop-shadow(0 0 10px rgba(123, 167, 134, 0.25));
+    filter: drop-shadow(0 0 10px rgba(52, 211, 153, 0.25));
   }
 
   .progress-ring-hole {
@@ -1015,7 +1035,7 @@
     font-size: 18px;
     font-weight: 600;
     color: var(--accent);
-    text-shadow: 0 0 14px rgba(91, 141, 184, 0.35);
+    text-shadow: 0 0 14px rgba(99, 179, 237, 0.35);
   }
 
   .metrics-side {
@@ -1242,7 +1262,7 @@
     <input type="number" id="patientCountInput" placeholder="Patients" value="30" min="1" max="1000" title="How many patients from the pool to evaluate against this trial's criteria" />
     <button id="loadBtn"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Load trial</button>
   </div>
-  <button type="button" class="upload-trial-toggle" id="uploadTrialToggle"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>or upload a trial document &darr;</button>
+  <button type="button" class="upload-trial-toggle" id="uploadTrialToggle"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg><span id="uploadTrialToggleLabel">or upload a trial document</span><svg class="icon" id="uploadTrialToggleChevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition: transform var(--ease);"><polyline points="6 9 12 15 18 9"/></svg></button>
   <div class="trial-info" id="trialInfo"></div>
 </header>
 
@@ -2195,9 +2215,12 @@
   const uploadTrialSubmit = document.getElementById('uploadTrialSubmit');
   const uploadTrialStatus = document.getElementById('uploadTrialStatus');
 
+  const uploadTrialToggleChevron = document.getElementById('uploadTrialToggleChevron');
+
   uploadTrialToggle.addEventListener('click', () => {
     const open = uploadTrialPanel.classList.toggle('open');
-    uploadTrialToggle.textContent = open ? 'or upload a trial document ↑' : 'or upload a trial document ↓';
+    uploadTrialToggle.classList.toggle('open', open);
+    uploadTrialToggleChevron.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
   });
 
   function updateTrialFileDropDisplay() {
@@ -2264,7 +2287,8 @@
       await loadTrial();
 
       uploadTrialPanel.classList.remove('open');
-      uploadTrialToggle.textContent = 'or upload a trial document ↓';
+      uploadTrialToggle.classList.remove('open');
+      uploadTrialToggleChevron.style.transform = 'rotate(0deg)';
       uploadTrialStatus.textContent = '';
     } catch (err) {
       uploadTrialSubmit.disabled = false;

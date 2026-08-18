@@ -4,27 +4,32 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>TriMatch Pro AI — Patient Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0C0D0F;
-    --panel: #141619;
-    --panel-2: #1A1D21;
-    --text: #E6E7E9;
-    --muted: #8A8F98;
-    --muted-2: #5D6169;
-    --line: #22252A;
-    --accent: #5B8DB8;
-    --accent-dim: rgba(91, 141, 184, 0.14);
-    --pass: #7BA786;
-    --pass-dim: rgba(123, 167, 134, 0.14);
-    --fail: #C06A5F;
-    --fail-dim: rgba(192, 106, 95, 0.14);
-    --unknown: #BCA274;
-    --unknown-dim: rgba(188, 162, 116, 0.14);
-    --radius: 3px;
-    --font-ui: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --bg: #08090d;
+    --panel: rgba(16, 22, 36, 0.75);
+    --panel-2: rgba(22, 30, 50, 0.9);
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --muted-2: #64748b;
+    --line: rgba(99, 179, 237, 0.1);
+    --accent: #63b3ed;
+    --accent-2: #7c3aed;
+    --accent-dim: rgba(99, 179, 237, 0.14);
+    --pass: #34d399;
+    --pass-dim: rgba(52, 211, 153, 0.14);
+    --fail: #fc8181;
+    --fail-dim: rgba(252, 129, 129, 0.14);
+    --unknown: #f6ad55;
+    --unknown-dim: rgba(246, 173, 85, 0.14);
+    --radius: 10px;
+    --radius-lg: 16px;
+    --font-ui: 'Inter', -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
-    --ease: 140ms ease;
+    --ease: 250ms cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   * { box-sizing: border-box; }
@@ -34,9 +39,9 @@
     margin: 0;
     background-color: var(--bg);
     background-image:
-      radial-gradient(500px circle at 90% -5%, rgba(91, 141, 184, 0.10), transparent 70%),
-      radial-gradient(420px circle at 5% 30%, rgba(123, 167, 134, 0.06), transparent 70%),
-      radial-gradient(600px circle at 60% 100%, rgba(91, 141, 184, 0.07), transparent 70%);
+      radial-gradient(620px circle at 90% -5%, rgba(99, 179, 237, 0.12), transparent 70%),
+      radial-gradient(500px circle at 5% 30%, rgba(52, 211, 153, 0.08), transparent 70%),
+      radial-gradient(680px circle at 60% 100%, rgba(99, 179, 237, 0.08), transparent 70%);
     background-attachment: fixed;
     background-repeat: no-repeat;
     color: var(--text);
@@ -74,6 +79,9 @@
     justify-content: space-between;
     gap: 1rem;
     flex-wrap: wrap;
+    background: rgba(8, 9, 13, 0.6);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
   }
 
   .session-left { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
@@ -169,6 +177,8 @@
     color: var(--muted-2);
     font-size: 13px;
     background: var(--panel);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--line);
     border-radius: var(--radius);
     padding: 1.25rem 1.4rem;
@@ -176,10 +186,18 @@
 
   .invite-card {
     background: var(--panel);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--line);
     border-radius: var(--radius);
     padding: 1.1rem 1.25rem;
     margin-bottom: 0.85rem;
+    transition: border-color var(--ease), box-shadow var(--ease), transform var(--ease);
+  }
+  .invite-card:hover {
+    border-color: rgba(99, 179, 237, 0.3);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+    transform: translateY(-1px);
   }
 
   .invite-top {
@@ -243,6 +261,8 @@
 
   .doc-panel {
     background: var(--panel);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--line);
     border-radius: var(--radius);
     overflow: hidden;

@@ -4,22 +4,26 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>TriMatch Pro AI — Patient Sign In</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0C0D0F;
-    --panel: #141619;
-    --panel-2: #1A1D21;
-    --text: #E6E7E9;
-    --muted: #8A8F98;
-    --muted-2: #5D6169;
-    --line: #22252A;
-    --pass: #7BA786;
-    --pass-dim: rgba(123, 167, 134, 0.14);
-    --accent: #5B8DB8;
-    --radius: 3px;
-    --font-ui: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --bg: #08090d;
+    --panel: rgba(16, 22, 36, 0.75);
+    --panel-2: rgba(22, 30, 50, 0.9);
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --muted-2: #64748b;
+    --line: rgba(99, 179, 237, 0.12);
+    --pass: #34d399;
+    --pass-dim: rgba(52, 211, 153, 0.14);
+    --accent: #63b3ed;
+    --radius: 10px;
+    --radius-lg: 18px;
+    --font-ui: 'Inter', -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
-    --ease: 140ms ease;
+    --ease: 250ms cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   * { box-sizing: border-box; }
@@ -29,9 +33,9 @@
     margin: 0;
     background-color: var(--bg);
     background-image:
-      radial-gradient(460px circle at 15% 15%, rgba(91, 141, 184, 0.13), transparent 70%),
-      radial-gradient(380px circle at 90% 20%, rgba(123, 167, 134, 0.08), transparent 70%),
-      radial-gradient(500px circle at 75% 90%, rgba(91, 141, 184, 0.08), transparent 70%);
+      radial-gradient(560px circle at 15% 15%, rgba(52, 211, 153, 0.14), transparent 70%),
+      radial-gradient(420px circle at 90% 20%, rgba(99, 179, 237, 0.1), transparent 70%),
+      radial-gradient(540px circle at 75% 90%, rgba(52, 211, 153, 0.08), transparent 70%);
     background-attachment: fixed;
     background-repeat: no-repeat;
     color: var(--text);
@@ -50,7 +54,17 @@
 
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-  .card { width: 100%; max-width: 400px; }
+  .card {
+    width: 100%;
+    max-width: 420px;
+    background: var(--panel);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    padding: 2.25rem 2.25rem 2rem;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+  }
 
   .back-link {
     display: inline-block;
@@ -58,6 +72,7 @@
     text-decoration: none;
     font-size: 12.5px;
     margin-bottom: 1.75rem;
+    transition: color var(--ease);
   }
   .back-link:hover { color: var(--muted); }
 
@@ -122,33 +137,41 @@
 
   input[type="text"] {
     width: 100%;
-    background: var(--panel);
+    background: rgba(0, 0, 0, 0.25);
     border: 1px solid var(--line);
     border-radius: var(--radius);
-    padding: 0.65rem 0.75rem;
+    padding: 0.7rem 0.85rem;
     color: var(--text);
     font-family: var(--font-ui);
     font-size: 14px;
+    transition: border-color var(--ease), background var(--ease), box-shadow var(--ease);
   }
 
   input#patientIdInput { font-family: var(--font-mono); font-size: 13px; }
 
   input[type="text"]::placeholder { color: var(--muted-2); }
-  input[type="text"]:focus-visible { border-color: var(--pass); }
+  input[type="text"]:focus-visible {
+    border-color: var(--pass);
+    background: rgba(0, 0, 0, 0.4);
+    box-shadow: 0 0 0 3px var(--pass-dim);
+    outline: none;
+  }
 
   .btn-primary {
     width: 100%;
     background: var(--pass-dim);
     color: var(--pass);
-    border: 1px solid transparent;
+    border: 1px solid rgba(52, 211, 153, 0.3);
     border-radius: var(--radius);
-    padding: 0.75rem 1rem;
+    padding: 0.8rem 1rem;
     font-size: 14px;
+    font-weight: 600;
     cursor: pointer;
     margin-top: 0.5rem;
-    transition: background var(--ease), box-shadow var(--ease);
+    transition: background var(--ease), box-shadow var(--ease), transform var(--ease);
   }
-  .btn-primary:hover { background: rgba(123, 167, 134, 0.24); box-shadow: 0 0 18px rgba(123, 167, 134, 0.25); }
+  .btn-primary:hover { background: rgba(52, 211, 153, 0.24); box-shadow: 0 6px 22px rgba(52, 211, 153, 0.25); transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
 
   .footnote {
     color: var(--muted-2);
