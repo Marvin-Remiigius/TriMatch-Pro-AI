@@ -1107,7 +1107,7 @@
     background: var(--line);
   }
 
-  .cohort-segment { height: 100%; }
+  .cohort-segment { height: 100%; transition: width 700ms cubic-bezier(0.16, 1, 0.3, 1); }
   .cohort-segment.seg-improved { background: var(--pass); }
   .cohort-segment.seg-worsened { background: var(--fail); }
   .cohort-segment.seg-indeterminate { background: var(--unknown); }
@@ -1150,7 +1150,7 @@
     flex-shrink: 0;
   }
 
-  .change-bar-fill { height: 100%; border-radius: 3px; }
+  .change-bar-fill { height: 100%; border-radius: 3px; transition: width 700ms cubic-bezier(0.16, 1, 0.3, 1); }
   .change-bar-fill.dev-improved { background: var(--pass); }
   .change-bar-fill.dev-worsened { background: var(--fail); }
   .change-bar-fill.dev-indeterminate { background: var(--unknown); }
@@ -1661,6 +1661,10 @@
       candidateList.querySelectorAll('.candidate').forEach(btn => {
         btn.addEventListener('click', () => selectCandidate(btn.dataset.pid));
       });
+
+      // Show the top-ranked candidate's breakdown immediately instead of
+      // making the researcher click into it themselves.
+      selectCandidate(data.candidates[0].patient_id);
     } catch (err) {
       setError('Could not reach the server. Try again.');
       candidateList.innerHTML = emptyStateHtml();
@@ -1822,7 +1826,44 @@
   }
 
   function changeBarHtml(t) {
-    return `<div class="change-bar-track"><div class="change-bar-fill ${devClass(t.status)}" style="width:${changeBarWidth(t)}%"></div></div>`;
+    return `<div class="change-bar-track"><div class="change-bar-fill ${devClass(t.status)}" data-target-width="${changeBarWidth(t)}" style="width:0%"></div></div>`;
+  }
+
+  // Bars/segments are rendered at width:0 and grown to their real width on
+  // the next couple of frames -- the width transition doesn't fire on
+  // insertion (the element would just appear at its final width), so this
+  // is what actually makes the graphs animate in rather than pop.
+  function animateBarWidths(container) {
+    if (!container) return;
+    const bars = container.querySelectorAll('[data-target-width]');
+    if (!bars.length) return;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        bars.forEach(bar => { bar.style.width = bar.dataset.targetWidth + '%'; });
+      });
+    });
+  }
+
+  // Animates the progress-ring donut (and its center percentage label) from
+  // 0 up to the real success rate, easing out.
+  function animateProgressRing(ringEl, pctEl, targetPct) {
+    if (!ringEl || !pctEl || targetPct === null || targetPct === undefined) return;
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      ringEl.style.background = `conic-gradient(var(--pass) ${targetPct * 3.6}deg, var(--line) 0)`;
+      pctEl.textContent = targetPct + '%';
+      return;
+    }
+    const duration = 900;
+    const start = performance.now();
+    function frame(now) {
+      const t = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3);
+      const current = targetPct * eased;
+      ringEl.style.background = `conic-gradient(var(--pass) ${current * 3.6}deg, var(--line) 0)`;
+      pctEl.textContent = Math.round(current) + '%';
+      if (t < 1) requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
   }
 
   function renderCohortChart(patients) {
@@ -1852,10 +1893,10 @@
             <span class="counts">${c.improved} improved · ${c.worsened} worsened · ${c.indeterminate + c.no_data} no signal</span>
           </div>
           <div class="cohort-track">
-            <div class="cohort-segment seg-improved" style="width:${seg(c.improved)}%"></div>
-            <div class="cohort-segment seg-worsened" style="width:${seg(c.worsened)}%"></div>
-            <div class="cohort-segment seg-indeterminate" style="width:${seg(c.indeterminate)}%"></div>
-            <div class="cohort-segment seg-no_data" style="width:${seg(c.no_data)}%"></div>
+            <div class="cohort-segment seg-improved" data-target-width="${seg(c.improved)}" style="width:0%"></div>
+            <div class="cohort-segment seg-worsened" data-target-width="${seg(c.worsened)}" style="width:0%"></div>
+            <div class="cohort-segment seg-indeterminate" data-target-width="${seg(c.indeterminate)}" style="width:0%"></div>
+            <div class="cohort-segment seg-no_data" data-target-width="${seg(c.no_data)}" style="width:0%"></div>
           </div>
         </div>
       `;
@@ -1894,14 +1935,11 @@
         ? Math.round(data.success_rate * 100)
         : null;
       const successPct = successRatePct !== null ? successRatePct + '%' : '—';
-      const ringGradient = successRatePct !== null
-        ? `conic-gradient(var(--pass) ${successRatePct * 3.6}deg, var(--line) 0)`
-        : `conic-gradient(var(--line) 0deg, var(--line) 0)`;
 
       metricsArea.innerHTML = `
         <div class="metrics-top">
-          <div class="progress-ring" style="background: ${ringGradient}" title="Share of enrolled patients whose most recent result improved over their baseline">
-            <div class="progress-ring-hole"><span class="progress-ring-pct">${successPct}</span></div>
+          <div class="progress-ring" id="progressRing" style="background: conic-gradient(var(--line) 0deg, var(--line) 0)" title="Share of enrolled patients whose most recent result improved over their baseline">
+            <div class="progress-ring-hole"><span class="progress-ring-pct" id="progressRingPct">${successRatePct !== null ? '0%' : successPct}</span></div>
           </div>
           <div class="metrics-side">
             <div class="metric" title="Patients currently enrolled or previously enrolled in this trial">
@@ -1926,6 +1964,8 @@
         </div>
       `;
 
+      animateProgressRing(document.getElementById('progressRing'), document.getElementById('progressRingPct'), successRatePct);
+
       if (data.patients.length === 0) {
         progressList.innerHTML = '<div class="detail-empty">No patients enrolled in this trial yet. Enrolled patients — and their progress against baseline — will show up here once the Enrollment &amp; consent tab has moved someone to "enrolled".</div>';
         progressDetailPanel.innerHTML = '<div class="detail-empty">No patients enrolled in this trial yet.</div>';
@@ -1933,6 +1973,7 @@
       }
 
       progressDetailPanel.innerHTML = renderCohortChart(data.patients);
+      animateBarWidths(progressDetailPanel);
 
       progressList.innerHTML = data.patients.map((p, i) => {
         const rows = p.tests.map(t => `
@@ -1953,6 +1994,8 @@
           </button>
         `;
       }).join('');
+
+      animateBarWidths(progressList);
 
       progressList.querySelectorAll('.patient-progress-row').forEach(btn => {
         btn.addEventListener('click', () => selectProgressPatient(btn.dataset.pid));
@@ -1999,6 +2042,7 @@
       </div>
       ${patient.tests.map(renderTest).join('')}
     `;
+    animateBarWidths(progressDetailPanel);
   }
 
   function statusPillClass(status) {
