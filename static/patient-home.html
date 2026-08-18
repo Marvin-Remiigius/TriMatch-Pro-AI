@@ -57,6 +57,15 @@
 
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.55; }
+    50% { opacity: 1; }
+  }
+
   .mono { font-family: var(--font-mono); }
 
   .icon {
@@ -118,6 +127,20 @@
 
   .session-name { color: var(--muted); font-size: 13px; }
 
+  .session-id {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted-2);
+    background: transparent;
+    border: 1px solid transparent;
+    cursor: pointer;
+    padding: 0.15rem 0.45rem;
+    border-radius: var(--radius);
+    transition: color var(--ease), background var(--ease), border-color var(--ease);
+  }
+  .session-id:hover { color: var(--text); background: rgba(99, 179, 237, 0.08); border-color: var(--line); }
+  .session-id.copied { color: var(--pass); border-color: rgba(52, 211, 153, 0.3); }
+
   .signout-btn {
     background: transparent;
     border: 1px solid var(--line);
@@ -136,6 +159,7 @@
     max-width: 920px;
     margin: 0 auto;
     padding: 2.25rem 1.5rem 3rem;
+    animation: fadeInUp 450ms ease-out;
   }
 
   .page-title { font-size: 19px; font-weight: 600; margin: 0 0 0.3rem; }
@@ -184,6 +208,8 @@
     padding: 1.25rem 1.4rem;
   }
 
+  .skeleton { animation: pulse 1.6s ease-in-out infinite; }
+
   .invite-card {
     background: var(--panel);
     backdrop-filter: blur(12px);
@@ -193,6 +219,7 @@
     padding: 1.1rem 1.25rem;
     margin-bottom: 0.85rem;
     transition: border-color var(--ease), box-shadow var(--ease), transform var(--ease);
+    animation: fadeInUp 400ms ease-out both;
   }
   .invite-card:hover {
     border-color: rgba(99, 179, 237, 0.3);
@@ -305,6 +332,7 @@
     <span class="crumb-sep">›</span>
     <span class="role-badge role-patient">Patient Portal</span>
     <span class="session-name" id="sessionName"></span>
+    <button class="session-id mono" id="sessionIdBtn" title="Click to copy your full patient ID"></button>
   </div>
   <button class="signout-btn" id="signoutBtn"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Sign out</button>
 </div>
@@ -358,6 +386,25 @@
   }
 
   document.getElementById('sessionName').textContent = patientName || '';
+
+  function shortId(id) {
+    return id && id.length > 10 ? id.slice(0, 8) : id;
+  }
+
+  const sessionIdBtn = document.getElementById('sessionIdBtn');
+  sessionIdBtn.textContent = `ID: ${shortId(patientId)}`;
+  sessionIdBtn.addEventListener('click', () => {
+    const original = sessionIdBtn.textContent;
+    navigator.clipboard.writeText(patientId).then(() => {
+      sessionIdBtn.textContent = 'Copied full ID';
+      sessionIdBtn.classList.add('copied');
+      setTimeout(() => {
+        sessionIdBtn.textContent = original;
+        sessionIdBtn.classList.remove('copied');
+      }, 1200);
+    }).catch(() => {});
+  });
+
   document.getElementById('signoutBtn').addEventListener('click', () => {
     sessionStorage.removeItem('tm_patient_name');
     sessionStorage.removeItem('tm_patient_id');
@@ -437,7 +484,7 @@
           : `<span class="note">No further action available.</span>`;
 
         return `
-          <div class="invite-card">
+          <div class="invite-card" style="animation-delay: ${Math.min(i * 60, 400)}ms">
             <div class="invite-top">
               <div class="invite-title">${esc(trial.title || e.nct_id)}</div>
               <span class="status-pill st-${esc(e.status)}" title="${esc(STATUS_HELP[e.status] || '')}">${STATUS_ICON[e.status] || ''} ${esc(STATUS_LABEL[e.status] || e.status)}</span>

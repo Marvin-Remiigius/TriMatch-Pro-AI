@@ -67,11 +67,23 @@
     outline-offset: 2px;
   }
 
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
   .wrap {
     width: 100%;
     max-width: 780px;
     text-align: center;
+    animation: fadeInUp 600ms ease-out;
   }
+
+  .portal-card {
+    animation: fadeInUp 500ms ease-out both;
+  }
+  .portal-card.researcher { animation-delay: 80ms; }
+  .portal-card.patient { animation-delay: 160ms; }
 
   .eyebrow {
     font-family: var(--font-mono);

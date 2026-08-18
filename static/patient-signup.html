@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>TriMatch Pro AI — Patient Sign Up</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #08090d;
+    --panel: rgba(16, 22, 36, 0.75);
+    --panel-2: rgba(22, 30, 50, 0.9);
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --muted-2: #64748b;
+    --line: rgba(99, 179, 237, 0.12);
+    --pass: #34d399;
+    --pass-dim: rgba(52, 211, 153, 0.14);
+    --accent: #63b3ed;
+    --fail: #fc8181;
+    --radius: 10px;
+    --radius-lg: 18px;
+    --font-ui: 'Inter', -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+    --ease: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+
+  body {
+    margin: 0;
+    background-color: var(--bg);
+    background-image:
+      radial-gradient(560px circle at 15% 15%, rgba(52, 211, 153, 0.14), transparent 70%),
+      radial-gradient(420px circle at 90% 20%, rgba(99, 179, 237, 0.1), transparent 70%),
+      radial-gradient(540px circle at 75% 90%, rgba(52, 211, 153, 0.08), transparent 70%);
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 14px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    display: flex;
+    justify-content: center;
+    padding: 3rem 1.25rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .card {
+    width: 100%;
+    max-width: 560px;
+    background: var(--panel);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    padding: 2.25rem 2.25rem 2rem;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+    animation: fadeInUp 500ms ease-out;
+  }
+
+  .back-link {
+    display: inline-block;
+    color: var(--muted-2);
+    text-decoration: none;
+    font-size: 12.5px;
+    margin-bottom: 1.75rem;
+    transition: color var(--ease);
+  }
+  .back-link:hover { color: var(--muted); }
+
+  .badge-row { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem; }
+
+  .portal-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: var(--radius);
+    background: var(--pass-dim);
+    color: var(--pass);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 0 14px rgba(52, 211, 153, 0.35);
+  }
+
+  .icon {
+    width: 1em;
+    height: 1em;
+    flex-shrink: 0;
+    vertical-align: -0.15em;
+  }
+  .portal-icon .icon { width: 16px; height: 16px; }
+
+  h1 { font-size: 18px; font-weight: 600; margin: 0; }
+
+  .sub {
+    color: var(--muted);
+    font-size: 13px;
+    margin: 0.4rem 0 1.75rem;
+  }
+
+  .section-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted-2);
+    margin: 1.4rem 0 0.75rem;
+    padding-top: 1.1rem;
+    border-top: 1px solid var(--line);
+  }
+  .section-label:first-of-type { margin-top: 0; padding-top: 0; border-top: none; }
+
+  label {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted-2);
+    margin-bottom: 0.4rem;
+  }
+
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; }
+  @media (max-width: 480px) { .row { grid-template-columns: 1fr; } }
+
+  .field { margin-bottom: 1.1rem; }
+  .hint {
+    color: var(--muted-2);
+    font-size: 11.5px;
+    margin-top: 0.4rem;
+  }
+
+  input[type="text"], input[type="date"], input[type="email"], input[type="tel"], select {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 0.7rem 0.85rem;
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 14px;
+    transition: border-color var(--ease), background var(--ease), box-shadow var(--ease);
+  }
+
+  select { cursor: pointer; }
+  select option { background: #0f1420; color: var(--text); }
+
+  input::placeholder { color: var(--muted-2); }
+  input:focus-visible, select:focus-visible {
+    border-color: var(--pass);
+    background: rgba(0, 0, 0, 0.4);
+    box-shadow: 0 0 0 3px var(--pass-dim);
+    outline: none;
+  }
+
+  .btn-primary {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: var(--pass-dim);
+    color: var(--pass);
+    border: 1px solid rgba(52, 211, 153, 0.3);
+    border-radius: var(--radius);
+    padding: 0.8rem 1rem;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 0.5rem;
+    transition: background var(--ease), box-shadow var(--ease), transform var(--ease);
+  }
+  .btn-primary:hover { background: rgba(52, 211, 153, 0.24); box-shadow: 0 6px 22px rgba(52, 211, 153, 0.25); transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:disabled { opacity: 0.6; cursor: default; transform: none; }
+
+  .status-line {
+    font-size: 12.5px;
+    color: var(--fail);
+    margin-top: 0.75rem;
+    text-align: center;
+    min-height: 1em;
+  }
+
+  .footnote {
+    color: var(--muted-2);
+    font-size: 11px;
+    margin-top: 1.75rem;
+    text-align: center;
+  }
+
+  .login-row {
+    color: var(--muted-2);
+    font-size: 12.5px;
+    margin-top: 1.25rem;
+    text-align: center;
+  }
+  .login-row a { color: var(--accent); text-decoration: none; }
+  .login-row a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <a class="back-link" href="index.html">&larr; Back to TriMatch home</a>
+
+  <div class="badge-row">
+    <div class="portal-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></div>
+    <h1>Create a patient account</h1>
+  </div>
+  <p class="sub">A few essential details so we can create your record. You can add lab reports and other documents once you're signed in.</p>
+
+  <form id="signupForm">
+    <div class="section-label">Your details</div>
+    <div class="row">
+      <div class="field">
+        <label for="firstNameInput">First name</label>
+        <input type="text" id="firstNameInput" placeholder="e.g. Alex" autocomplete="given-name" required />
+      </div>
+      <div class="field">
+        <label for="lastNameInput">Last name</label>
+        <input type="text" id="lastNameInput" placeholder="e.g. Rivera" autocomplete="family-name" required />
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label for="dobInput">Date of birth</label>
+        <input type="date" id="dobInput" autocomplete="bday" required />
+      </div>
+      <div class="field">
+        <label for="genderInput">Gender</label>
+        <select id="genderInput" required>
+          <option value="" disabled selected>Select…</option>
+          <option value="Female">Female</option>
+          <option value="Male">Male</option>
+          <option value="Other">Other</option>
+          <option value="Prefer not to say">Prefer not to say</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="section-label">Contact &amp; optional details</div>
+    <div class="row">
+      <div class="field">
+        <label for="emailInput">Email <span style="text-transform:none; letter-spacing:0;">(optional)</span></label>
+        <input type="email" id="emailInput" placeholder="you@example.com" autocomplete="email" />
+      </div>
+      <div class="field">
+        <label for="phoneInput">Phone <span style="text-transform:none; letter-spacing:0;">(optional)</span></label>
+        <input type="tel" id="phoneInput" placeholder="e.g. 5551234567" autocomplete="tel" />
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label for="cityInput">City <span style="text-transform:none; letter-spacing:0;">(optional)</span></label>
+        <input type="text" id="cityInput" placeholder="e.g. Boston" autocomplete="address-level2" />
+      </div>
+      <div class="field">
+        <label for="countryInput">Country <span style="text-transform:none; letter-spacing:0;">(optional)</span></label>
+        <input type="text" id="countryInput" placeholder="e.g. United States" autocomplete="country-name" />
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label for="bloodGroupInput">Blood group <span style="text-transform:none; letter-spacing:0;">(optional)</span></label>
+        <select id="bloodGroupInput">
+          <option value="" selected>Not sure / prefer not to say</option>
+          <option>O+</option><option>O-</option>
+          <option>A+</option><option>A-</option>
+          <option>B+</option><option>B-</option>
+          <option>AB+</option><option>AB-</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="ethnicityInput">Ethnicity <span style="text-transform:none; letter-spacing:0;">(optional)</span></label>
+        <input type="text" id="ethnicityInput" placeholder="e.g. Caucasian" autocomplete="off" />
+      </div>
+    </div>
+
+    <button type="submit" class="btn-primary" id="submitBtn"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>Create my account</button>
+    <div class="status-line" id="statusLine"></div>
+  </form>
+
+  <div class="login-row">Already have a patient ID? <a href="patient-login.html">Sign in instead &rarr;</a></div>
+
+  <div class="footnote">This is a prototype — details you enter here are stored in the demo database only.</div>
+</div>
+
+<script>
+  const form = document.getElementById('signupForm');
+  const submitBtn = document.getElementById('submitBtn');
+  const statusLine = document.getElementById('statusLine');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    statusLine.textContent = '';
+
+    const firstName = document.getElementById('firstNameInput').value.trim();
+    const lastName = document.getElementById('lastNameInput').value.trim();
+    const dob = document.getElementById('dobInput').value;
+    const gender = document.getElementById('genderInput').value;
+
+    if (!firstName || !lastName || !dob || !gender) {
+      statusLine.textContent = 'Please fill in your name, date of birth, and gender.';
+      return;
+    }
+
+    const payload = {
+      first_name: firstName,
+      last_name: lastName,
+      date_of_birth: dob,
+      gender: gender,
+      email: document.getElementById('emailInput').value.trim() || null,
+      phone: document.getElementById('phoneInput').value.trim() || null,
+      city: document.getElementById('cityInput').value.trim() || null,
+      country: document.getElementById('countryInput').value.trim() || null,
+      blood_group: document.getElementById('bloodGroupInput').value || null,
+      ethnicity: document.getElementById('ethnicityInput').value.trim() || null,
+    };
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Creating your account…';
+
+    try {
+      const res = await fetch('/patients/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        statusLine.textContent = data.detail || 'Could not create your account. Try again.';
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>Create my account';
+        return;
+      }
+
+      sessionStorage.setItem('tm_patient_name', data.name);
+      sessionStorage.setItem('tm_patient_id', data.patient_id);
+      window.location.href = 'patient-home.html';
+    } catch (err) {
+      statusLine.textContent = 'Could not reach the server. Try again.';
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>Create my account';
+    }
+  });
+</script>
+
+</body>
+</html>

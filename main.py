@@ -39,6 +39,8 @@ from models import (
     ParseCriteriaResponse,
     ParseCriteriaToDBResponse,
     Patient,
+    PatientSignupRequest,
+    PatientSignupResponse,
     TrialCriterionRow,
     TrialProgressResponse,
     UploadDocumentResponse,
@@ -47,6 +49,7 @@ from models import (
     UploadTrialResponse,
 )
 from patients import get_patient, load_patients
+from patient_signup import create_patient
 from progress import compute_trial_progress, store_trial_metrics
 from trial_upload import ingest_trial_document, ingest_trial_document_file
 from trials import criterion_to_db_row, fetch_trial, to_trial_row
@@ -100,6 +103,17 @@ async def get_trial(nct_id: str):
             "overall_status": row.get("status"),
             "primary_endpoint": row.get("primary_endpoint"),
             "eligibility_criteria": None,
+            # A locally-uploaded trial (no ClinicalTrials.gov record) has no
+            # source to read these from -- same shape as the CT.gov path,
+            # just empty, so the frontend doesn't need to special-case it.
+            "brief_summary": None,
+            "conditions": [],
+            "study_type": None,
+            "interventions": [],
+            "minimum_age": None,
+            "maximum_age": None,
+            "eligible_sex": None,
+            "healthy_volunteers": None,
         }
 
 
@@ -363,6 +377,16 @@ def get_patient_enrollment(patient_id: str):
 def get_trial_audit(nct_id: str, limit: int = 200):
     client = get_client()
     return list_trial_audit(client, nct_id, limit=limit)
+
+
+@app.post("/patients/signup", response_model=PatientSignupResponse)
+def patient_signup(request: PatientSignupRequest):
+    """Patient-portal self-signup: creates a new `patients` row from the
+    essential intake details on the signup form and returns the new
+    patient_id, so the frontend can sign the patient straight in."""
+    client = get_client()
+    result = create_patient(client, request)
+    return PatientSignupResponse(**result)
 
 
 @app.get("/patients", response_model=list[Patient])

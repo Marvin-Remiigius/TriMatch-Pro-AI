@@ -72,6 +72,15 @@
     outline-offset: 2px;
   }
 
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.55; }
+    50% { opacity: 1; }
+  }
+
   .mono { font-family: var(--font-mono); }
 
   .icon {
@@ -101,6 +110,7 @@
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.65);
     position: relative;
     overflow: hidden;
+    animation: fadeInUp 500ms ease-out;
   }
 
   .card::before {
@@ -194,6 +204,55 @@
   .terms p { margin: 0 0 0.85rem; }
   .terms p:last-child { margin-bottom: 0; }
 
+  .trial-context { margin: 1.1rem 0 0; animation: fadeInUp 450ms ease-out; }
+
+  .trial-summary {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.65;
+    margin-bottom: 1rem;
+  }
+
+  .trial-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 0.7rem 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .trial-meta-item .k {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted-2);
+    margin-bottom: 0.2rem;
+  }
+
+  .trial-meta-item .v { font-size: 12.5px; color: var(--text); }
+
+  .chip-row { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.5rem; }
+
+  .chip {
+    font-size: 11.5px;
+    padding: 0.25rem 0.65rem;
+    border-radius: 999px;
+    background: var(--accent-dim);
+    color: var(--accent);
+    border: 1px solid rgba(99, 179, 237, 0.25);
+  }
+
+  .chip.intervention { background: var(--pass-dim); color: var(--pass); border-color: rgba(52, 211, 153, 0.25); }
+
+  .chip-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted-2);
+    margin-bottom: 0.4rem;
+  }
+
   .actions {
     display: flex;
     gap: 0.75rem;
@@ -229,6 +288,7 @@
     border: 1px solid var(--line);
     border-radius: var(--radius);
     padding: 1.25rem 1.4rem;
+    animation: fadeInUp 400ms ease-out;
   }
 
   .status-box.success { border-color: rgba(123, 167, 134, 0.35); box-shadow: 0 0 20px rgba(123, 167, 134, 0.08); }
@@ -252,7 +312,7 @@
     text-align: center;
   }
 
-  .skeleton { color: var(--muted-2); font-size: 13px; }
+  .skeleton { color: var(--muted-2); font-size: 13px; animation: pulse 1.6s ease-in-out infinite; }
 
   .steps {
     display: flex;
@@ -328,6 +388,7 @@
     gap: 0.75rem;
     padding: 0.7rem 0;
     border-bottom: 1px solid var(--line);
+    animation: fadeInUp 350ms ease-out both;
   }
 
   .progress-row .name { font-size: 13px; }
@@ -585,8 +646,8 @@
           <div class="progress-panel">
             <div class="baseline-note">Baseline set ${mine.baseline_date ? esc(mine.baseline_date.slice(0, 10)) : '—'}. Compared against your most recent results:</div>
             <div class="progress-list">
-              ${mine.tests.map(t => `
-                <div class="progress-row">
+              ${mine.tests.map((t, i) => `
+                <div class="progress-row" style="animation-delay: ${Math.min(i * 50, 400)}ms">
                   <div class="name">${esc(t.test_name || t.test_code)}</div>
                   <div class="values">
                     ${t.baseline_value != null ? esc(t.baseline_value) : '—'} → ${t.latest_value != null ? esc(t.latest_value) : '—'}${t.unit ? ' ' + esc(t.unit) : ''}
@@ -668,6 +729,40 @@
     `;
   }
 
+  function ageLabel(min, max) {
+    if (!min && !max) return null;
+    if (min && max) return `${esc(min)} – ${esc(max)}`;
+    return esc(min || max);
+  }
+
+  function renderTrialContext(trial) {
+    const conditions = trial.conditions || [];
+    const interventions = trial.interventions || [];
+    const age = ageLabel(trial.minimum_age, trial.maximum_age);
+
+    const metaItems = [];
+    if (trial.study_type) metaItems.push(['Study type', trial.study_type]);
+    if (trial.eligible_sex) metaItems.push(['Eligible sex', trial.eligible_sex]);
+    if (age) metaItems.push(['Age range', age]);
+    if (trial.healthy_volunteers !== null && trial.healthy_volunteers !== undefined) {
+      metaItems.push(['Healthy volunteers', trial.healthy_volunteers ? 'Accepted' : 'Not accepted']);
+    }
+
+    if (!trial.brief_summary && !conditions.length && !interventions.length && !metaItems.length) {
+      return '';
+    }
+
+    return `
+      <div class="trial-context">
+        <div class="section-title"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>About this trial</div>
+        ${trial.brief_summary ? `<div class="trial-summary">${esc(trial.brief_summary)}</div>` : ''}
+        ${metaItems.length ? `<div class="trial-meta-grid">${metaItems.map(([k, v]) => `<div class="trial-meta-item"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div></div>`).join('')}</div>` : ''}
+        ${conditions.length ? `<div class="chip-label">Conditions studied</div><div class="chip-row">${conditions.map(c => `<span class="chip">${esc(c)}</span>`).join('')}</div>` : ''}
+        ${interventions.length ? `<div class="chip-label">Interventions</div><div class="chip-row">${interventions.map(i => `<span class="chip intervention" title="${esc(i.type || '')}">${esc(i.name || i.type || 'Intervention')}</span>`).join('')}</div>` : ''}
+      </div>
+    `;
+  }
+
   function renderConsentForm(trial) {
     const phase = Array.isArray(trial.phase) ? trial.phase.join(', ') : trial.phase;
     content.innerHTML = `
@@ -676,6 +771,8 @@
         <div class="title">${esc(trial.title || trial.nct_id)}</div>
         <div class="meta">${esc(trial.nct_id)}${phase ? ' · ' + esc(phase) : ''}${trial.overall_status ? ' · ' + esc(trial.overall_status) : ''}</div>
       </div>
+
+      ${renderTrialContext(trial)}
 
       <h1>Invitation to participate</h1>
       <div class="eyebrow" title="This invitation is addressed to you, identified by your patient ID">Patient</div>

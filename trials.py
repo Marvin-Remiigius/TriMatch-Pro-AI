@@ -23,9 +23,17 @@ async def fetch_trial(nct_id: str) -> dict:
     design = protocol.get("designModule", {})
     eligibility = protocol.get("eligibilityModule", {})
     outcomes = protocol.get("outcomesModule", {})
+    description = protocol.get("descriptionModule", {})
+    conditions_module = protocol.get("conditionsModule", {})
+    arms_module = protocol.get("armsInterventionsModule", {})
 
     primary_outcomes = outcomes.get("primaryOutcomes", [])
     primary_endpoint = primary_outcomes[0]["measure"] if primary_outcomes else None
+
+    interventions = [
+        {"type": i.get("type"), "name": i.get("name")}
+        for i in arms_module.get("interventions", [])
+    ]
 
     return {
         "nct_id": identification.get("nctId", nct_id),
@@ -34,6 +42,17 @@ async def fetch_trial(nct_id: str) -> dict:
         "overall_status": status.get("overallStatus"),
         "eligibility_criteria": eligibility.get("eligibilityCriteria"),
         "primary_endpoint": primary_endpoint,
+        # Additive context fields -- surfaced on the patient-facing invitation
+        # page so patients see more than just a title and an ID. None of
+        # this is used by matching/parsing; purely for display.
+        "brief_summary": description.get("briefSummary"),
+        "conditions": conditions_module.get("conditions", []),
+        "study_type": design.get("studyType"),
+        "interventions": interventions,
+        "minimum_age": eligibility.get("minimumAge"),
+        "maximum_age": eligibility.get("maximumAge"),
+        "eligible_sex": eligibility.get("sex"),
+        "healthy_volunteers": eligibility.get("healthyVolunteers"),
     }
 
 

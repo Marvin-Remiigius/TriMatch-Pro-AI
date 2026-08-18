@@ -44,6 +44,12 @@
     -webkit-font-smoothing: antialiased;
   }
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
   .back-link {
     display: inline-block;
     max-width: 900px;
@@ -58,6 +64,7 @@
   header {
     max-width: 900px;
     margin: 0 auto 1.5rem;
+    animation: fadeInUp 450ms ease-out;
   }
   h1 {
     font-size: 1.4rem;
@@ -131,6 +138,7 @@
     margin-bottom: 0.75rem;
     overflow: hidden;
     transition: border-color var(--ease);
+    animation: fadeInUp 350ms ease-out both;
   }
   .candidate-summary {
     display: flex;
@@ -235,7 +243,7 @@
       `).join('');
 
       return `
-        <div class="candidate" id="candidate-${idx}">
+        <div class="candidate" id="candidate-${idx}" style="animation-delay: ${Math.min(idx * 40, 400)}ms">
           <div class="candidate-summary" onclick="document.getElementById('candidate-${idx}').classList.toggle('open')">
             <div class="candidate-left">
               <span class="chevron">&#9656;</span>

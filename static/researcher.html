@@ -70,6 +70,19 @@
     outline-offset: 2px;
   }
 
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.55; }
+    50% { opacity: 1; }
+  }
+
   .eyebrow {
     font-family: var(--font-mono);
     font-size: 10.5px;
@@ -291,7 +304,7 @@
     padding: 1rem 1.5rem 1.25rem;
     background: var(--panel);
   }
-  .upload-trial-panel.open { display: block; }
+  .upload-trial-panel.open { display: block; animation: fadeInUp 250ms ease-out; }
 
   .upload-trial-row {
     display: flex;
@@ -471,8 +484,18 @@
     overflow: hidden;
   }
 
-  #progressPanel #metricsArea {
+  /* Right side of the Progress tab: a fixed metrics summary panel stacked
+     above the cohort-trend/detail panel -- two distinct panels sharing the
+     grid's second column, not one panel with hidden internal structure. */
+  .progress-right-col {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .progress-metrics-panel {
     flex-shrink: 0;
+    border-bottom: 1px solid var(--line);
   }
 
   #progressList {
@@ -513,6 +536,7 @@
     padding: 0.65rem 0.8rem;
     cursor: pointer;
     transition: border-color var(--ease), background var(--ease), box-shadow var(--ease), transform var(--ease);
+    animation: fadeInUp 300ms ease-out both;
   }
 
   .candidate:hover { border-color: rgba(99, 179, 237, 0.35); background: rgba(99, 179, 237, 0.06); transform: translateX(2px); }
@@ -601,6 +625,7 @@
   .criterion {
     border-top: 1px solid var(--line);
     padding: 0.85rem 0;
+    animation: fadeInUp 300ms ease-out both;
   }
 
   .criterion:first-of-type { border-top: none; }
@@ -736,6 +761,7 @@
   .skeleton {
     color: var(--muted-2);
     font-size: 12.5px;
+    animation: pulse 1.6s ease-in-out infinite;
   }
 
   /* ---------- Tabs ---------- */
@@ -772,7 +798,7 @@
   }
 
   .view { display: none; }
-  .view.active { display: block; }
+  .view.active { display: block; animation: fadeIn 300ms ease-out; }
 
   .view-sub {
     color: var(--muted);
@@ -887,6 +913,7 @@
     cursor: pointer;
     margin-bottom: 0.4rem;
     transition: border-color var(--ease), background var(--ease), box-shadow var(--ease);
+    animation: fadeInUp 300ms ease-out both;
   }
 
   .patient-progress-row:hover { border-color: var(--muted-2); }
@@ -1058,6 +1085,7 @@
 
   .cohort-row {
     margin-bottom: 0.9rem;
+    animation: fadeInUp 350ms ease-out both;
   }
 
   .cohort-row-label {
@@ -1137,6 +1165,12 @@
     padding: 0.65rem 0.8rem;
     margin-bottom: 0.4rem;
   }
+
+  /* Only applied on the initial (non-polling) render -- the enrollment
+     list re-renders every 4s in the background while this tab is open, and
+     replaying the entrance animation on every poll tick would be
+     distracting rather than tasteful. */
+  .enrollment-row.anim-in { animation: fadeInUp 300ms ease-out both; }
 
   .er-top {
     display: flex;
@@ -1313,14 +1347,17 @@
   <div class="view-sub">Compares each enrolled patient's most recent lab results against their baseline (the values recorded when they were enrolled), so you can see who's trending better or worse.</div>
   <main class="workspace">
     <section class="panel candidates-panel" id="progressPanel">
-      <div id="metricsArea"></div>
-      <div class="panel-list-header">Enrolled patients</div>
       <div class="candidate-list" id="progressList"></div>
     </section>
 
-    <section class="panel detail-panel" id="progressDetailPanel">
-      <div class="detail-empty">Select a patient on the left to see their full test-by-test breakdown.</div>
-    </section>
+    <div class="progress-right-col">
+      <section class="panel progress-metrics-panel">
+        <div id="metricsArea"></div>
+      </section>
+      <section class="panel detail-panel" id="progressDetailPanel">
+        <div class="detail-empty">Select a patient on the left to see their full test-by-test breakdown.</div>
+      </section>
+    </div>
   </main>
 </div>
 
@@ -1607,10 +1644,10 @@
         return;
       }
 
-      candidateList.innerHTML = data.candidates.map(c => {
+      candidateList.innerHTML = data.candidates.map((c, i) => {
         const demo = [c.age !== null && c.age !== undefined ? c.age : null, c.sex].filter(Boolean).join(' · ');
         return `
-          <button class="candidate" data-pid="${esc(c.patient_id)}">
+          <button class="candidate" data-pid="${esc(c.patient_id)}" style="animation-delay: ${Math.min(i * 30, 400)}ms">
             <div class="candidate-top">
               <span class="candidate-id mono" title="Patient ID (shortened) — open a candidate to see the full ID">${esc(shortId(c.patient_id))}</span>
               <span class="badge ${badgeClass(c.overall)}" title="${esc(OVERALL_HELP[c.overall] || '')}">${overallIcon(c.overall)}${esc(c.overall)}</span>
@@ -1897,7 +1934,7 @@
 
       progressDetailPanel.innerHTML = renderCohortChart(data.patients);
 
-      progressList.innerHTML = data.patients.map(p => {
+      progressList.innerHTML = data.patients.map((p, i) => {
         const rows = p.tests.map(t => `
           <div class="test-readout">
             <span class="dev-dot ${devClass(t.status)}" title="${esc(t.test_name || t.test_code)}: ${esc(devClass(t.status).replace('dev-', ''))}"></span>
@@ -1907,7 +1944,7 @@
           </div>
         `).join('');
         return `
-          <button class="patient-progress-row" data-pid="${esc(p.patient_id)}">
+          <button class="patient-progress-row" data-pid="${esc(p.patient_id)}" style="animation-delay: ${Math.min(i * 30, 400)}ms">
             <div class="ppr-top">
               <span class="ppr-id mono" title="Full patient ID — shortened here for display">${esc(shortId(p.patient_id))}</span>
               <span class="status-tag" title="${esc(STATUS_HELP[p.status] || '')}">${esc(p.status)}</span>
@@ -2054,10 +2091,13 @@
       </div>
     `;
 
-    enrollmentList.innerHTML = candidates.map(c => {
+    enrollmentList.innerHTML = candidates.map((c, i) => {
       const status = statusByPatient[c.patient_id] || 'not_invited';
+      const rowAttrs = quiet
+        ? 'class="enrollment-row"'
+        : `class="enrollment-row anim-in" style="animation-delay: ${Math.min(i * 30, 400)}ms"`;
       return `
-        <div class="enrollment-row">
+        <div ${rowAttrs}>
           <div class="er-top">
             <button type="button" class="er-id-btn mono" data-full-id="${esc(c.patient_id)}" title="Click to copy the full patient ID -- share this with the patient so they can sign in to the patient portal"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>${esc(shortId(c.patient_id))}</button>
             <span class="badge ${badgeClass(c.overall)}" title="${esc(OVERALL_HELP[c.overall] || '')}">${overallIcon(c.overall)}${esc(c.overall)}</span>

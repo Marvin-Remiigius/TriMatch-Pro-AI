@@ -323,6 +323,30 @@ class UploadTrialResponse(BaseModel):
     criteria: list[TrialCriterionRow]
 
 
+class PatientSignupRequest(BaseModel):
+    """Essential intake details collected on the patient-portal signup
+    form. Everything the matching engine actually needs (diagnoses, labs,
+    medications) still comes in later via document/lab upload -- this is
+    just enough to create the patient record and their patients-table row."""
+    first_name: str
+    last_name: str
+    date_of_birth: date
+    gender: str
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    city: Optional[str] = None
+    country: Optional[str] = None
+    blood_group: Optional[str] = None
+    ethnicity: Optional[str] = None
+
+
+class PatientSignupResponse(BaseModel):
+    patient_id: str
+    name: str
+    age: int
+    gender: str
+
+
 class LabResultRecord(BaseModel):
     """Full source lab_results row -- for source data verification: lets
     the dashboard fetch and display the exact record a verdict cited,
