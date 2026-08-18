@@ -400,6 +400,21 @@
     gap: 0.4rem;
   }
 
+  /* Separates the stats/controls block above each list (funnel, metrics,
+     enrollment summary) from the list itself -- two distinct pieces of one
+     panel, not one undifferentiated stack. */
+  .panel-list-header {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted-2);
+    padding: 0.9rem 0 0.6rem;
+    margin-top: 0.25rem;
+    border-top: 1px solid var(--line);
+    flex-shrink: 0;
+  }
+
   /* Trial Progress tab only: the patient list scrolls in place instead of
      the whole page, since it can run to hundreds of enrolled patients. The
      metrics area above it (donut + cohort chart) stays put. */
@@ -1223,6 +1238,7 @@
   <main class="workspace">
     <section class="panel candidates-panel">
       <div id="funnelArea"></div>
+      <div class="panel-list-header">Candidates</div>
       <div class="candidate-list" id="candidateList">
         <div class="empty-state">
           <div class="empty-state-title">No trial loaded yet</div>
@@ -1243,6 +1259,7 @@
   <main class="workspace">
     <section class="panel candidates-panel" id="progressPanel">
       <div id="metricsArea"></div>
+      <div class="panel-list-header">Enrolled patients</div>
       <div class="candidate-list" id="progressList"></div>
     </section>
 
@@ -1257,6 +1274,7 @@
   <main class="workspace">
     <section class="panel candidates-panel">
       <div id="enrollmentSummary"></div>
+      <div class="panel-list-header">Candidates &amp; status</div>
       <div class="candidate-list" id="enrollmentList"></div>
     </section>
 

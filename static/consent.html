@@ -355,6 +355,37 @@
 
   .btn-sm.danger { background: var(--fail); border-color: transparent; color: #1a1110; }
   .btn-sm:disabled { opacity: 0.5; cursor: default; }
+
+  /* ---------- Section grouping (distinct functional areas) ---------- */
+
+  .section { margin-top: 1.75rem; }
+
+  .section-header {
+    margin-bottom: 0.9rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .section-title {
+    font-size: 14.5px;
+    font-weight: 600;
+    margin: 0 0 0.25rem;
+  }
+
+  .section-desc {
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .progress-panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 1.1rem 1.25rem;
+  }
+
+  .progress-panel .progress-list { margin: 0; border-top: none; }
+  .progress-panel .progress-row:last-child { border-bottom: none; }
 </style>
 </head>
 <body>
@@ -497,21 +528,23 @@
       let progressHtml = '';
       if (mine && mine.tests && mine.tests.length) {
         progressHtml = `
-          <div class="baseline-note">Baseline set ${mine.baseline_date ? esc(mine.baseline_date.slice(0, 10)) : '—'}. Compared against your most recent results:</div>
-          <div class="progress-list">
-            ${mine.tests.map(t => `
-              <div class="progress-row">
-                <div class="name">${esc(t.test_name || t.test_code)}</div>
-                <div class="values">
-                  ${t.baseline_value != null ? esc(t.baseline_value) : '—'} → ${t.latest_value != null ? esc(t.latest_value) : '—'}${t.unit ? ' ' + esc(t.unit) : ''}
-                  <div class="trend-badge trend-${esc(t.status)}" title="${esc(trendHelp(t.status))}">${esc(trendLabel(t.status))}</div>
+          <div class="progress-panel">
+            <div class="baseline-note">Baseline set ${mine.baseline_date ? esc(mine.baseline_date.slice(0, 10)) : '—'}. Compared against your most recent results:</div>
+            <div class="progress-list">
+              ${mine.tests.map(t => `
+                <div class="progress-row">
+                  <div class="name">${esc(t.test_name || t.test_code)}</div>
+                  <div class="values">
+                    ${t.baseline_value != null ? esc(t.baseline_value) : '—'} → ${t.latest_value != null ? esc(t.latest_value) : '—'}${t.unit ? ' ' + esc(t.unit) : ''}
+                    <div class="trend-badge trend-${esc(t.status)}" title="${esc(trendHelp(t.status))}">${esc(trendLabel(t.status))}</div>
+                  </div>
                 </div>
-              </div>
-            `).join('')}
+              `).join('')}
+            </div>
           </div>
         `;
       } else {
-        progressHtml = `<div class="terms"><p>No follow-up lab results have been recorded since enrollment yet. Check back after your next visit.</p></div>`;
+        progressHtml = `<div class="progress-panel"><p style="margin:0; color:var(--muted); font-size:13px;">No follow-up lab results have been recorded since enrollment yet. Check back after your next visit.</p></div>`;
       }
 
       content.innerHTML = `
@@ -520,7 +553,13 @@
           <div class="headline">You're enrolled — thank you for participating</div>
           <div class="body">Your care team will keep tracking your results as part of this trial.</div>
         </div>
-        ${progressHtml}
+        <div class="section">
+          <div class="section-header">
+            <div class="section-title">Your progress</div>
+            <div class="section-desc">How your latest results compare to your baseline.</div>
+          </div>
+          ${progressHtml}
+        </div>
         ${renderWithdrawSection()}
       `;
       attachWithdrawHandler(renderWithdrawnConfirmation);

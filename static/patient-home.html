@@ -109,13 +109,45 @@
   /* ---------- Body ---------- */
 
   main {
-    max-width: 640px;
+    max-width: 920px;
     margin: 0 auto;
     padding: 2.25rem 1.5rem 3rem;
   }
 
   .page-title { font-size: 19px; font-weight: 600; margin: 0 0 0.3rem; }
   .page-sub { color: var(--muted); font-size: 13.5px; margin: 0 0 2rem; }
+
+  /* ---------- Section grouping (distinct functional areas) ---------- */
+
+  .portal-layout {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 2rem;
+    align-items: start;
+  }
+
+  @media (max-width: 760px) {
+    .portal-layout { grid-template-columns: 1fr; }
+  }
+
+  .section + .section { margin-top: 2rem; }
+
+  .section-header {
+    margin-bottom: 0.9rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .section-title {
+    font-size: 14.5px;
+    font-weight: 600;
+    margin: 0 0 0.25rem;
+  }
+
+  .section-desc {
+    font-size: 12px;
+    color: var(--muted);
+  }
 
   .skeleton, .detail-empty {
     color: var(--muted-2);
@@ -189,23 +221,28 @@
     text-align: center;
   }
 
-  .upload-lab-cta {
+  .doc-panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .doc-action {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
     flex-wrap: wrap;
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
     padding: 1rem 1.25rem;
-    margin-bottom: 1.5rem;
   }
 
-  .upload-lab-cta-title { font-weight: 600; font-size: 13.5px; }
-  .upload-lab-cta-sub { color: var(--muted); font-size: 12.5px; margin-top: 0.15rem; }
+  .doc-action + .doc-action { border-top: 1px solid var(--line); }
 
-  .upload-lab-cta-btn {
+  .doc-action-title { font-weight: 600; font-size: 13.5px; }
+  .doc-action-sub { color: var(--muted); font-size: 12px; margin-top: 0.15rem; }
+
+  .doc-action-btn {
     flex-shrink: 0;
     color: var(--accent);
     background: var(--accent-dim);
@@ -214,9 +251,10 @@
     font-size: 12.5px;
     font-weight: 600;
     text-decoration: none;
+    white-space: nowrap;
     transition: background var(--ease);
   }
-  .upload-lab-cta-btn:hover { background: rgba(91, 141, 184, 0.24); }
+  .doc-action-btn:hover { background: rgba(91, 141, 184, 0.24); }
 </style>
 </head>
 <body>
@@ -232,23 +270,42 @@
 </div>
 
 <main>
-  <div class="page-title">Your trial invitations</div>
-  <div class="page-sub">Trials a research team has invited you to, or that you're currently part of. Open any invitation below to review the trial and respond.</div>
-  <div class="upload-lab-cta">
-    <div>
-      <div class="upload-lab-cta-title">Have a new lab report?</div>
-      <div class="upload-lab-cta-sub">Paste it in and we'll read the values into your record automatically.</div>
-    </div>
-    <a class="upload-lab-cta-btn" href="upload-lab.html">Upload lab report &rarr;</a>
+  <div class="page-title">Patient Portal</div>
+  <div class="page-sub">Review your trial invitations and consent status, and keep your documents up to date.</div>
+
+  <div class="portal-layout">
+    <section class="section">
+      <div class="section-header">
+        <div class="section-title">Trials &amp; consent</div>
+        <div class="section-desc">Trials a research team has invited you to, or that you're currently part of. Open any invitation to review the trial and respond.</div>
+      </div>
+      <div id="content" class="skeleton">Loading your trial invitations…</div>
+    </section>
+
+    <section class="section">
+      <div class="section-header">
+        <div class="section-title">Documents</div>
+        <div class="section-desc">Add records to your file.</div>
+      </div>
+      <div class="doc-panel">
+        <div class="doc-action">
+          <div>
+            <div class="doc-action-title">Lab report</div>
+            <div class="doc-action-sub">Paste it in and we'll read the values into your record automatically.</div>
+          </div>
+          <a class="doc-action-btn" href="upload-lab.html">Upload &rarr;</a>
+        </div>
+        <div class="doc-action">
+          <div>
+            <div class="doc-action-title">Supporting document</div>
+            <div class="doc-action-sub">Referral letters, imaging reports, and other records for your care team.</div>
+          </div>
+          <a class="doc-action-btn" href="upload-document.html">Add &rarr;</a>
+        </div>
+      </div>
+    </section>
   </div>
-  <div class="upload-lab-cta">
-    <div>
-      <div class="upload-lab-cta-title">Have a supporting document?</div>
-      <div class="upload-lab-cta-sub">Referral letters, imaging reports, and other records — filed against your record for your care team.</div>
-    </div>
-    <a class="upload-lab-cta-btn" href="upload-document.html">Add a document &rarr;</a>
-  </div>
-  <div id="content" class="skeleton">Loading your trial invitations…</div>
+
   <div class="footnote">This is a prototype patient portal for demonstration.</div>
 </main>
 
