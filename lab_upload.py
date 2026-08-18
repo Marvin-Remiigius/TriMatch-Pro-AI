@@ -1,20 +1,21 @@
 """
 Patient-portal lab report upload -> AI extraction -> existing normalized
 store. Flowchart step 9 (source data verification): a patient pastes a
-free-text lab report, the LLM (llm.extract_lab_values, the same Gemini
-client the criteria parser uses) extracts structured values, and each one
-is written into the EXISTING `lab_results` table with a citation back to
-the EXISTING `patient_documents` row for the upload. No schema change --
-`lab_report_id` (a free-text column, not a foreign key in the existing
-schema) carries "DOC<document_id>" so every inserted lab_results row is
-traceable to its source document without altering either table.
+free-text lab report OR uploads a file (PDF, or a photo/scan image), the
+LLM (llm.extract_lab_values / extract_lab_values_from_file, the same
+Gemini client the criteria parser uses) extracts structured values, and
+each one is written into the EXISTING `lab_results` table with a citation
+back to the EXISTING `patient_documents` row for the upload. No schema
+change -- `lab_report_id` (a free-text column, not a foreign key in the
+existing schema) carries "DOC<document_id>" so every inserted lab_results
+row is traceable to its source document without altering either table.
 """
 
 import hashlib
 import re
 from datetime import datetime, timezone
 
-from llm import extract_lab_values
+from llm import extract_lab_values, extract_lab_values_from_file
 
 # The test_code convention already used by the seeded lab_results data
 # (scripts/seed_extra_labs.py and the original dataset) -- extracted values
@@ -87,16 +88,59 @@ def _normalize_test_code(test_name: str, llm_code: str | None) -> tuple[str, boo
 
 
 def ingest_lab_report(client, patient_id: str, raw_text: str) -> dict:
-    """Extracts structured lab values from raw_text via Gemini, writes one
-    patient_documents row for the upload, then inserts the extracted values
-    into lab_results referencing it. Caller is responsible for confirming
-    patient_id exists first."""
+    """Extracts structured lab values from pasted free-text via Gemini,
+    writes one patient_documents row for the upload, then inserts the
+    extracted values into lab_results referencing it. Caller is
+    responsible for confirming patient_id exists first."""
     extraction = extract_lab_values(raw_text)
+    return _write_lab_report(
+        client,
+        patient_id,
+        extraction,
+        document_hash=hashlib.sha256(raw_text.encode("utf-8")).hexdigest(),
+        # No real file storage in this demo -- the raw pasted text itself
+        # is the source record, kept inline so it stays traceable (same
+        # spirit as file_path, just no filesystem).
+        file_path=raw_text,
+        source_label=None,
+    )
+
+
+def ingest_lab_report_file(
+    client, patient_id: str, file_bytes: bytes, mime_type: str, filename: str | None = None
+) -> dict:
+    """Same pipeline as ingest_lab_report, but the source is an uploaded
+    file (PDF or photo/scan image) instead of pasted text -- Gemini reads
+    the document/image directly (extract_lab_values_from_file), no local
+    PDF/OCR library involved. Caller is responsible for confirming
+    patient_id exists and the mime_type is supported first."""
+    extraction = extract_lab_values_from_file(file_bytes, mime_type)
+    return _write_lab_report(
+        client,
+        patient_id,
+        extraction,
+        document_hash=hashlib.sha256(file_bytes).hexdigest(),
+        # No real file storage in this demo -- record the original
+        # filename (or a mime-type placeholder) rather than the binary.
+        file_path=filename or f"uploaded {mime_type}",
+        source_label=filename,
+    )
+
+
+def _write_lab_report(
+    client, patient_id: str, extraction: dict, *, document_hash: str, file_path: str,
+    source_label: str | None,
+) -> dict:
+    """Shared write path for both ingest_lab_report and
+    ingest_lab_report_file: writes the patient_documents row for the
+    upload, then the extracted lab_results rows referencing it."""
     items = extraction["items"]
 
     now_iso = datetime.now(timezone.utc).isoformat()
     report_date = next((i["test_date"] for i in items if i["test_date"]), None) or now_iso
     document_name = f"Lab report uploaded {now_iso[:10]}"
+    if source_label:
+        document_name += f" ({source_label})"
 
     document = (
         client.table("patient_documents")
@@ -106,11 +150,8 @@ def ingest_lab_report(client, patient_id: str, raw_text: str) -> dict:
                 "document_type": "lab_report",
                 "document_name": document_name,
                 "document_date": report_date,
-                # No real file storage in this demo -- the raw pasted text
-                # itself is the source record, kept inline so it stays
-                # traceable (same spirit as file_path, just no filesystem).
-                "file_path": raw_text,
-                "document_hash": hashlib.sha256(raw_text.encode("utf-8")).hexdigest(),
+                "file_path": file_path,
+                "document_hash": document_hash,
             }
         )
         .execute()

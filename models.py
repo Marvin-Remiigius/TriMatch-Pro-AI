@@ -296,6 +296,33 @@ class UploadLabResponse(BaseModel):
     llm_error: Optional[str] = None
 
 
+class UploadDocumentResponse(BaseModel):
+    """A general supporting-document upload (referral letter, imaging
+    report, etc.) -- filed as a patient_documents row, no extraction."""
+    patient_id: str
+    document_id: int
+    document_name: str
+    document_type: str
+    document_date: Optional[str] = None
+
+
+class UploadTrialResponse(BaseModel):
+    """Researcher-portal trial document upload -> a newly created local
+    trial with its criteria already parsed, same shape as
+    ParseCriteriaToDBResponse plus the metadata the LLM read off the
+    document (so the UI can show what was read, not just the result)."""
+    nct_id: str
+    title: Optional[str] = None
+    phase: Optional[str] = None
+    primary_endpoint: Optional[str] = None
+    eligibility_criteria: Optional[str] = None
+    total: int
+    inclusion: int
+    exclusion: int
+    needs_review: int
+    criteria: list[TrialCriterionRow]
+
+
 class LabResultRecord(BaseModel):
     """Full source lab_results row -- for source data verification: lets
     the dashboard fetch and display the exact record a verdict cited,

@@ -165,6 +165,7 @@
     margin-top: 0.9rem;
     flex-wrap: wrap;
   }
+  .panel-actions.submit-row { justify-content: flex-end; }
 
   .sample-btn {
     background: transparent;
@@ -176,6 +177,70 @@
     text-decoration: none;
   }
   .sample-btn:hover { text-decoration: underline; }
+
+  /* ---------- Mode toggle (paste text / upload file) ---------- */
+
+  .mode-toggle {
+    display: inline-flex;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 1.1rem;
+  }
+
+  .mode-btn {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-size: 12.5px;
+    font-weight: 600;
+    font-family: inherit;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    transition: background var(--ease), color var(--ease);
+  }
+  .mode-btn + .mode-btn { border-left: 1px solid var(--line); }
+  .mode-btn.active { background: var(--accent-dim); color: var(--accent); }
+  .mode-btn:hover:not(.active) { color: var(--text); }
+
+  .mode-block { display: none; }
+  .mode-block.active { display: block; }
+
+  /* ---------- File upload ---------- */
+
+  .file-drop {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    min-height: 150px;
+    background: var(--panel-2);
+    border: 1px dashed var(--line);
+    border-radius: var(--radius);
+    color: var(--muted);
+    font-size: 12.5px;
+    text-align: center;
+    padding: 1.5rem;
+    cursor: pointer;
+    transition: border-color var(--ease), color var(--ease);
+  }
+  .file-drop:hover, .file-drop.dragover { border-color: var(--accent); color: var(--text); }
+  .file-drop.has-file {
+    border-style: solid;
+    border-color: var(--pass);
+    color: var(--text);
+  }
+
+  .file-drop-hint {
+    color: var(--muted-2);
+    font-size: 11.5px;
+  }
+
+  .file-drop-name {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+  }
 
   .btn {
     padding: 0.65rem 1.1rem;
@@ -293,13 +358,32 @@
 
 <main>
   <div class="page-title">Upload a lab report</div>
-  <div class="page-sub">Paste the text of a lab report below. We'll read it, pull out the individual test results, and add them to your record — each one linked back to this upload so it stays traceable.</div>
+  <div class="page-sub">Paste a lab report's text, or upload the file itself — a PDF, or a photo/scan of a printed report. We'll read it, pull out the individual test results, and add them to your record — each one linked back to this upload so it stays traceable.</div>
 
   <div class="panel">
-    <label for="reportText">Lab report text</label>
-    <textarea id="reportText" placeholder="Paste your lab report text here…"></textarea>
-    <div class="panel-actions">
-      <button type="button" class="sample-btn" id="fillSampleBtn">Use a sample report</button>
+    <div class="mode-toggle">
+      <button type="button" class="mode-btn active" id="modeTextBtn">Paste text</button>
+      <button type="button" class="mode-btn" id="modeFileBtn">Upload file</button>
+    </div>
+
+    <div class="mode-block active" id="textMode">
+      <label for="reportText">Lab report text</label>
+      <textarea id="reportText" placeholder="Paste your lab report text here…"></textarea>
+      <div class="panel-actions">
+        <button type="button" class="sample-btn" id="fillSampleBtn">Use a sample report</button>
+      </div>
+    </div>
+
+    <div class="mode-block" id="fileMode">
+      <label for="reportFile">Lab report file</label>
+      <label class="file-drop" for="reportFile" id="fileDropLabel">
+        <span class="file-drop-name" id="fileDropName">Click to choose a file, or drag one here</span>
+        <span class="file-drop-hint">PDF, PNG, JPEG, or plain text · up to 15MB</span>
+      </label>
+      <input type="file" id="reportFile" accept=".pdf,.png,.jpg,.jpeg,.txt,application/pdf,image/png,image/jpeg,text/plain" style="display:none;" />
+    </div>
+
+    <div class="panel-actions submit-row">
       <button type="button" class="btn" id="submitBtn">Extract &amp; add to my record</button>
     </div>
     <div class="status-line" id="statusLine"></div>
@@ -359,17 +443,95 @@ Comments: Patient advised to continue current diet and follow up in 3 months.`;
   const labList = document.getElementById('labList');
   const droppedNote = document.getElementById('droppedNote');
 
+  // ---------- Mode toggle (paste text / upload file) ----------
+
+  const modeTextBtn = document.getElementById('modeTextBtn');
+  const modeFileBtn = document.getElementById('modeFileBtn');
+  const textMode = document.getElementById('textMode');
+  const fileMode = document.getElementById('fileMode');
+  let currentMode = 'text';
+
+  function setMode(mode) {
+    currentMode = mode;
+    modeTextBtn.classList.toggle('active', mode === 'text');
+    modeFileBtn.classList.toggle('active', mode === 'file');
+    textMode.classList.toggle('active', mode === 'text');
+    fileMode.classList.toggle('active', mode === 'file');
+    statusLine.textContent = '';
+    statusLine.classList.remove('error');
+  }
+
+  modeTextBtn.addEventListener('click', () => setMode('text'));
+  modeFileBtn.addEventListener('click', () => setMode('file'));
+
+  // ---------- File picker / drag & drop ----------
+
+  const fileInput = document.getElementById('reportFile');
+  const fileDropLabel = document.getElementById('fileDropLabel');
+  const fileDropName = document.getElementById('fileDropName');
+
+  function updateFileDropDisplay() {
+    const file = fileInput.files[0];
+    if (file) {
+      fileDropName.textContent = file.name;
+      fileDropLabel.classList.add('has-file');
+    } else {
+      fileDropName.textContent = 'Click to choose a file, or drag one here';
+      fileDropLabel.classList.remove('has-file');
+    }
+  }
+
+  fileInput.addEventListener('change', updateFileDropDisplay);
+
+  ['dragover', 'dragleave', 'drop'].forEach(evt => {
+    fileDropLabel.addEventListener(evt, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (evt === 'dragover') fileDropLabel.classList.add('dragover');
+      if (evt === 'dragleave') fileDropLabel.classList.remove('dragover');
+      if (evt === 'drop') {
+        fileDropLabel.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+          fileInput.files = e.dataTransfer.files;
+          updateFileDropDisplay();
+        }
+      }
+    });
+  });
+
   function formatDate(iso) {
     if (!iso) return '';
     return iso.slice(0, 10);
   }
 
   submitBtn.addEventListener('click', async () => {
-    const text = textarea.value.trim();
-    if (!text) {
-      statusLine.textContent = 'Paste a lab report first.';
-      statusLine.classList.add('error');
-      return;
+    let fetchPromise;
+
+    if (currentMode === 'text') {
+      const text = textarea.value.trim();
+      if (!text) {
+        statusLine.textContent = 'Paste a lab report first.';
+        statusLine.classList.add('error');
+        return;
+      }
+      fetchPromise = fetch(`/patients/${encodeURIComponent(patientId)}/upload-lab`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+    } else {
+      const file = fileInput.files[0];
+      if (!file) {
+        statusLine.textContent = 'Choose a file first.';
+        statusLine.classList.add('error');
+        return;
+      }
+      const formData = new FormData();
+      formData.append('file', file);
+      fetchPromise = fetch(`/patients/${encodeURIComponent(patientId)}/upload-lab-file`, {
+        method: 'POST',
+        body: formData,
+      });
     }
 
     statusLine.classList.remove('error');
@@ -378,11 +540,7 @@ Comments: Patient advised to continue current diet and follow up in 3 months.`;
     resultsPanel.classList.remove('show');
 
     try {
-      const res = await fetch(`/patients/${encodeURIComponent(patientId)}/upload-lab`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
-      });
+      const res = await fetchPromise;
       const data = await res.json();
 
       if (!res.ok) {
@@ -398,7 +556,7 @@ Comments: Patient advised to continue current diet and follow up in 3 months.`;
       if (!data.extracted.length) {
         resultsHeadline.textContent = 'No lab values found';
         resultsHeadline.style.color = 'var(--unknown)';
-        resultsSource.innerHTML = `We couldn't find any recognizable lab results in that text. Try pasting the full report, including test names and values.`;
+        resultsSource.innerHTML = `We couldn't find any recognizable lab results in ${currentMode === 'file' ? 'that file' : 'that text'}. Try ${currentMode === 'file' ? 'a clearer copy of the report' : 'pasting the full report, including test names and values'}.`;
         labList.innerHTML = '';
         droppedNote.style.display = 'none';
         resultsPanel.classList.add('show');
@@ -437,9 +595,11 @@ Comments: Patient advised to continue current diet and follow up in 3 months.`;
 
   document.getElementById('uploadAnotherBtn').addEventListener('click', () => {
     textarea.value = '';
+    fileInput.value = '';
+    updateFileDropDisplay();
     resultsPanel.classList.remove('show');
     statusLine.textContent = '';
-    textarea.focus();
+    if (currentMode === 'text') textarea.focus();
   });
 </script>
 

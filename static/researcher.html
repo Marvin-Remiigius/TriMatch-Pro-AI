@@ -231,6 +231,86 @@
   }
   .example-btn:hover { border-color: var(--accent); color: var(--accent); }
 
+  /* ---------- Trial document upload (create a trial from a PDF) ---------- */
+
+  .upload-trial-toggle {
+    background: transparent;
+    border: none;
+    color: var(--accent);
+    font-size: 12.5px;
+    cursor: pointer;
+    padding: 0;
+    white-space: nowrap;
+  }
+  .upload-trial-toggle:hover { text-decoration: underline; }
+
+  .upload-trial-panel {
+    display: none;
+    border-bottom: 1px solid var(--line);
+    padding: 1rem 1.5rem 1.25rem;
+    background: var(--panel);
+  }
+  .upload-trial-panel.open { display: block; }
+
+  .upload-trial-row {
+    display: flex;
+    align-items: stretch;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .trial-file-drop {
+    flex: 1 1 320px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.6rem;
+    background: var(--panel-2);
+    border: 1px dashed var(--line);
+    border-radius: var(--radius);
+    color: var(--muted);
+    font-size: 12.5px;
+    text-align: center;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    transition: border-color var(--ease), color var(--ease);
+  }
+  .trial-file-drop:hover, .trial-file-drop.dragover { border-color: var(--accent); color: var(--text); }
+  .trial-file-drop.has-file { border-style: solid; border-color: var(--pass); color: var(--text); }
+  .trial-file-drop .mono { font-family: var(--font-mono); }
+
+  .upload-trial-submit {
+    background: var(--accent-dim);
+    color: var(--accent);
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    padding: 0.6rem 1rem;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: background var(--ease);
+  }
+  .upload-trial-submit:hover { background: rgba(91, 141, 184, 0.24); }
+  .upload-trial-submit:disabled { opacity: 0.5; cursor: default; }
+
+  .upload-trial-sub {
+    color: var(--muted-2);
+    font-size: 11.5px;
+    margin-top: 0.6rem;
+  }
+  .upload-trial-sub a { color: var(--accent); text-decoration: none; }
+  .upload-trial-sub a:hover { text-decoration: underline; }
+
+  .upload-trial-status {
+    font-size: 12.5px;
+    color: var(--muted);
+    margin-top: 0.6rem;
+  }
+  .upload-trial-status.error { color: var(--fail); }
+  .upload-trial-status.success { color: var(--pass); }
+
   .status-line {
     padding: 0 1.5rem;
     min-height: 0;
@@ -1114,8 +1194,21 @@
     <input type="number" id="patientCountInput" placeholder="Patients" value="30" min="1" max="1000" title="How many patients from the pool to evaluate against this trial's criteria" />
     <button id="loadBtn">Load trial</button>
   </div>
+  <button type="button" class="upload-trial-toggle" id="uploadTrialToggle">or upload a trial document &darr;</button>
   <div class="trial-info" id="trialInfo"></div>
 </header>
+
+<div class="upload-trial-panel" id="uploadTrialPanel">
+  <div class="upload-trial-row">
+    <label class="trial-file-drop" for="trialDocFile" id="trialFileDropLabel">
+      <span id="trialFileDropName">Click to choose a trial protocol/summary document, or drag one here</span>
+    </label>
+    <input type="file" id="trialDocFile" accept=".pdf,.png,.jpg,.jpeg,.txt,application/pdf,image/png,image/jpeg,text/plain" style="display:none;" />
+    <button type="button" class="upload-trial-submit" id="uploadTrialSubmit">Create trial from document</button>
+  </div>
+  <div class="upload-trial-sub">Reads the title, phase, and eligibility criteria from a PDF, photo/scan, or plain text file -- no ClinicalTrials.gov record needed. Try a <a href="samples/sample-trial-protocol.pdf" download>sample protocol</a>.</div>
+  <div class="upload-trial-status" id="uploadTrialStatus"></div>
+</div>
 
 <div class="tab-row" id="tabRow">
   <button class="tab-btn active" id="tabCandidates">Candidates</button>
@@ -2001,6 +2094,94 @@
     if (e.key === 'Enter') loadTrial();
   });
   wireExampleButton();
+
+  // ---------- Trial document upload (create a trial from a PDF) ----------
+
+  const uploadTrialToggle = document.getElementById('uploadTrialToggle');
+  const uploadTrialPanel = document.getElementById('uploadTrialPanel');
+  const trialDocFile = document.getElementById('trialDocFile');
+  const trialFileDropLabel = document.getElementById('trialFileDropLabel');
+  const trialFileDropName = document.getElementById('trialFileDropName');
+  const uploadTrialSubmit = document.getElementById('uploadTrialSubmit');
+  const uploadTrialStatus = document.getElementById('uploadTrialStatus');
+
+  uploadTrialToggle.addEventListener('click', () => {
+    const open = uploadTrialPanel.classList.toggle('open');
+    uploadTrialToggle.textContent = open ? 'or upload a trial document ↑' : 'or upload a trial document ↓';
+  });
+
+  function updateTrialFileDropDisplay() {
+    const file = trialDocFile.files[0];
+    if (file) {
+      trialFileDropName.innerHTML = `<span class="mono">${esc(file.name)}</span>`;
+      trialFileDropLabel.classList.add('has-file');
+    } else {
+      trialFileDropName.textContent = 'Click to choose a trial protocol/summary document, or drag one here';
+      trialFileDropLabel.classList.remove('has-file');
+    }
+  }
+
+  trialDocFile.addEventListener('change', updateTrialFileDropDisplay);
+
+  ['dragover', 'dragleave', 'drop'].forEach(evt => {
+    trialFileDropLabel.addEventListener(evt, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (evt === 'dragover') trialFileDropLabel.classList.add('dragover');
+      if (evt === 'dragleave') trialFileDropLabel.classList.remove('dragover');
+      if (evt === 'drop') {
+        trialFileDropLabel.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+          trialDocFile.files = e.dataTransfer.files;
+          updateTrialFileDropDisplay();
+        }
+      }
+    });
+  });
+
+  uploadTrialSubmit.addEventListener('click', async () => {
+    const file = trialDocFile.files[0];
+    if (!file) {
+      uploadTrialStatus.textContent = 'Choose a file first.';
+      uploadTrialStatus.className = 'upload-trial-status error';
+      return;
+    }
+
+    uploadTrialStatus.textContent = 'Reading the document and creating the trial…';
+    uploadTrialStatus.className = 'upload-trial-status';
+    uploadTrialSubmit.disabled = true;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('/trials/upload-document', { method: 'POST', body: formData });
+      const data = await res.json();
+      uploadTrialSubmit.disabled = false;
+
+      if (!res.ok) {
+        uploadTrialStatus.textContent = data.detail || 'Could not read this document.';
+        uploadTrialStatus.className = 'upload-trial-status error';
+        return;
+      }
+
+      uploadTrialStatus.textContent = `Created ${data.nct_id} — ${data.total} criteria parsed (${data.needs_review} need review). Loading candidates…`;
+      uploadTrialStatus.className = 'upload-trial-status success';
+
+      nctInput.value = data.nct_id;
+      trialDocFile.value = '';
+      updateTrialFileDropDisplay();
+      await loadTrial();
+
+      uploadTrialPanel.classList.remove('open');
+      uploadTrialToggle.textContent = 'or upload a trial document ↓';
+      uploadTrialStatus.textContent = '';
+    } catch (err) {
+      uploadTrialSubmit.disabled = false;
+      uploadTrialStatus.textContent = 'Could not reach the server. Try again.';
+      uploadTrialStatus.className = 'upload-trial-status error';
+    }
+  });
 </script>
 
 </body>

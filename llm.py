@@ -231,9 +231,10 @@ is left uncaptured, so needs_review is false.
 
 LAB_EXTRACTION_SYSTEM_PROMPT = """You are a clinical lab report extractor.
 
-Given raw free-text lab report content (which may mix formatting styles,
-abbreviations, and units), extract every individual lab test result you can
-find as one JSON object per result.
+You will be given lab report content -- either as raw text, or as a document
+(PDF, or a photo/scan of a printed report) which may mix formatting styles,
+abbreviations, units, tables, and handwriting-adjacent print quality. Extract
+every individual lab test result you can find as one JSON object per result.
 
 Each element:
 {
@@ -262,13 +263,17 @@ If a lab result is real but doesn't match any of the codes above, still
 include it with "test_code": null and its literal test_name -- do not drop
 it just because it's uncoded.
 
+If a page/image is illegible, blank, or not a lab report at all, don't guess
+values for it -- just extract whatever genuinely-readable results exist
+elsewhere in the document (or return an empty array if none do).
+
 If a value is ambiguous, not actually numeric, or the line doesn't describe
 an actual lab test result (e.g. patient demographics, a header, free-text
 notes, a doctor's name), SKIP it entirely -- do not guess a value or invent
 a result that isn't really there.
 
 Return ONLY a JSON array of these objects, no prose, no markdown fences. If
-nothing in the text is a lab result, return an empty array: []
+nothing in the content is a lab result, return an empty array: []
 """
 
 
@@ -284,13 +289,15 @@ def _strip_markdown_fences(text: str) -> str:
     return "\n".join(lines).strip()
 
 
-def extract_lab_values(raw_text: str) -> dict:
-    """Sends free-text lab report content to the same Gemini client/model
-    the criteria parser uses (same call shape: text in, strict JSON out).
-    Parses defensively -- strips markdown fences, retries once on bad JSON,
-    and drops individually malformed entries rather than failing the whole
-    extraction. Returns {"items": [...], "dropped_count": int, "error":
-    str | None}; items is always a list (possibly empty), never raises."""
+def _extract_lab_values_from_contents(contents) -> dict:
+    """Shared core: sends `contents` (raw text, or a Part built from
+    document/image bytes) to the same Gemini client/model the criteria
+    parser uses, with the same call shape (system instruction + strict JSON
+    response). Parses defensively -- strips markdown fences, retries once
+    on bad JSON, and drops individually malformed entries rather than
+    failing the whole extraction. Returns {"items": [...], "dropped_count":
+    int, "error": str | None}; items is always a list (possibly empty),
+    never raises."""
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         return {"items": [], "dropped_count": 0, "error": "GEMINI_API_KEY is not configured"}
@@ -303,7 +310,7 @@ def extract_lab_values(raw_text: str) -> dict:
         try:
             response = client.models.generate_content(
                 model=MODEL,
-                contents=raw_text,
+                contents=contents,
                 config=types.GenerateContentConfig(
                     system_instruction=LAB_EXTRACTION_SYSTEM_PROMPT,
                     response_mime_type="application/json",
@@ -360,6 +367,136 @@ def extract_lab_values(raw_text: str) -> dict:
         )
 
     return {"items": items, "dropped_count": dropped, "error": None}
+
+
+# Mime types Gemini can read directly as an inline document/image part --
+# covers "a PDF or any format of report/document" without any local PDF/OCR
+# library: the same multimodal model that already does the text extraction
+# reads the file's pixels/pages itself. Shared by the lab-report file upload
+# and the trial-document upload below.
+SUPPORTED_DOCUMENT_FILE_MIME_TYPES = {
+    "application/pdf",
+    "image/png",
+    "image/jpeg",
+}
+
+
+def extract_lab_values(raw_text: str) -> dict:
+    """Pasted free-text lab report -> structured lab values. See
+    `_extract_lab_values_from_contents` for the shared call/parsing logic."""
+    return _extract_lab_values_from_contents(raw_text)
+
+
+def extract_lab_values_from_file(file_bytes: bytes, mime_type: str) -> dict:
+    """Uploaded lab report file (PDF or photo/scan image) -> structured lab
+    values. Same Gemini client/model/config as `extract_lab_values` and the
+    criteria parser -- only the input part changes, from a text string to
+    an inline document/image part, since Gemini reads both natively."""
+    part = types.Part.from_bytes(data=file_bytes, mime_type=mime_type)
+    return _extract_lab_values_from_contents([part])
+
+
+TRIAL_DOCUMENT_SYSTEM_PROMPT = """You are a clinical trial document reader.
+
+You will be given a clinical trial protocol, summary, or registration
+document -- as raw text, or as a document (PDF, or a photo/scan of a
+printed page). Extract the trial's identifying metadata and its full
+eligibility criteria section.
+
+Return ONLY a JSON object, no prose, no markdown fences:
+{
+  "title": "<the trial's title/name, or null if not stated>",
+  "phase": "<the trial phase as stated, e.g. 'Phase 2', or null>",
+  "primary_endpoint": "<the primary objective/endpoint/outcome measure, in
+    the document's own words, or null if not stated>",
+  "eligibility_criteria": "<the FULL eligibility criteria section, copied
+    VERBATIM from the document -- both inclusion and exclusion criteria,
+    including their headers and every bullet/numbered item. Do not
+    summarize, paraphrase, or drop any criterion. If the document has no
+    identifiable eligibility criteria section at all, use null.>"
+}
+
+Your only job is faithful extraction -- you are not deciding what the
+criteria mean or whether they're well-formed; a separate step structures
+them afterward. If a field genuinely isn't present in the document, use
+null for it rather than guessing or inventing a value.
+"""
+
+
+def extract_trial_document(raw_text: str) -> dict:
+    """Pasted/decoded trial document text -> {title, phase,
+    primary_endpoint, eligibility_criteria, error}. See
+    `_extract_trial_document_from_contents` for the shared logic."""
+    return _extract_trial_document_from_contents(raw_text)
+
+
+def extract_trial_document_from_file(file_bytes: bytes, mime_type: str) -> dict:
+    """Uploaded trial document file (PDF or photo/scan image) -> the same
+    shape as `extract_trial_document`. Same Gemini client/model as every
+    other extraction in this file -- only the input part changes."""
+    part = types.Part.from_bytes(data=file_bytes, mime_type=mime_type)
+    return _extract_trial_document_from_contents([part])
+
+
+def _extract_trial_document_from_contents(contents) -> dict:
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        return _trial_doc_error("GEMINI_API_KEY is not configured")
+
+    client = genai.Client(api_key=api_key)
+
+    parsed = None
+    last_error = None
+    for _ in range(2):  # one retry on a transient call/parse failure
+        try:
+            response = client.models.generate_content(
+                model=MODEL,
+                contents=contents,
+                config=types.GenerateContentConfig(
+                    system_instruction=TRIAL_DOCUMENT_SYSTEM_PROMPT,
+                    response_mime_type="application/json",
+                    temperature=0,
+                ),
+            )
+        except Exception as exc:
+            last_error = f"LLM call failed: {exc}"
+            continue
+
+        try:
+            parsed = json.loads(_strip_markdown_fences(response.text))
+            last_error = None
+            break
+        except (json.JSONDecodeError, TypeError) as exc:
+            last_error = f"LLM returned malformed JSON: {exc}"
+            parsed = None
+            continue
+
+    if parsed is None:
+        return _trial_doc_error(last_error)
+
+    if not isinstance(parsed, dict):
+        return _trial_doc_error("LLM response was not a JSON object")
+
+    def _clean_str(value):
+        return value.strip() if isinstance(value, str) and value.strip() else None
+
+    return {
+        "title": _clean_str(parsed.get("title")),
+        "phase": _clean_str(parsed.get("phase")),
+        "primary_endpoint": _clean_str(parsed.get("primary_endpoint")),
+        "eligibility_criteria": _clean_str(parsed.get("eligibility_criteria")),
+        "error": None,
+    }
+
+
+def _trial_doc_error(message: str) -> dict:
+    return {
+        "title": None,
+        "phase": None,
+        "primary_endpoint": None,
+        "eligibility_criteria": None,
+        "error": message,
+    }
 
 
 def _fallback_criterion(raw_text: str, reason: str) -> Criterion:

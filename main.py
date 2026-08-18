@@ -1,7 +1,5 @@
-import json
-
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from postgrest.exceptions import APIError
@@ -10,6 +8,7 @@ from audit import get_audit_log, get_flagged_for_review, log_match_results
 from coarse_filter import coarse_filter_patient_ids
 from db import get_client
 from db_matching import match_patient_db
+from document_upload import SUPPORTED_DOCUMENT_TYPES, store_patient_document
 from enrollment import (
     InvalidTransitionError,
     consent_patient,
@@ -21,15 +20,14 @@ from enrollment import (
     list_trial_audit,
     withdraw_patient,
 )
-from lab_upload import ingest_lab_report
-from llm import parse_criteria
+from lab_upload import ingest_lab_report, ingest_lab_report_file
+from llm import SUPPORTED_DOCUMENT_FILE_MIME_TYPES, parse_criteria
 from matching import match_patient
 from models import (
     AuditEntry,
     AuditLogRow,
     Candidate,
     CandidateListResponse,
-    Criterion,
     DBCandidateListResponse,
     DBCandidateSummary,
     EnrollmentRecord,
@@ -43,12 +41,15 @@ from models import (
     Patient,
     TrialCriterionRow,
     TrialProgressResponse,
+    UploadDocumentResponse,
     UploadLabRequest,
     UploadLabResponse,
+    UploadTrialResponse,
 )
 from patients import get_patient, load_patients
 from progress import compute_trial_progress, store_trial_metrics
-from trials import fetch_trial, to_trial_row
+from trial_upload import ingest_trial_document, ingest_trial_document_file
+from trials import criterion_to_db_row, fetch_trial, to_trial_row
 
 load_dotenv()
 
@@ -115,71 +116,6 @@ async def import_trial(nct_id: str):
     )
 
 
-def _criterion_to_db_row(nct_id: str, c: Criterion) -> dict:
-    """Shapes a parsed Criterion into a trial_criteria row. No DB schema
-    change: a criterion with 0-1 rules is encoded exactly as before
-    (single scalar in `value`); a criterion with 2+ rules stores the full
-    rule list as JSON in that same `value` column (field/operator/unit
-    mirror the first rule, for backward compat with anything -- e.g.
-    coarse_filter.py -- that only reads the top-level columns). A criterion
-    with rule_groups (OR of AND-groups, for alternative pathways) stores
-    {"rule_groups": [[...], ...]} as JSON in the same `value` column -- a
-    JSON *object*, distinguishable from the flat rule-list *array* encoding
-    above, so db_matching.py can tell them apart without a schema change."""
-    if c.rule_groups:
-        first_group = c.rule_groups[0] if c.rule_groups else []
-        first = first_group[0] if first_group else None
-        return {
-            "nct_id": nct_id,
-            "type": c.type,
-            "raw_text": c.text,
-            "field": first.field if first else None,
-            "operator": first.operator if first else None,
-            "value": json.dumps(
-                {"rule_groups": [[r.model_dump() for r in group] for group in c.rule_groups]}
-            ),
-            "unit": first.unit if first else None,
-            "needs_review": c.needs_review,
-        }
-
-    if c.rules and len(c.rules) > 1:
-        first = c.rules[0]
-        return {
-            "nct_id": nct_id,
-            "type": c.type,
-            "raw_text": c.text,
-            "field": first.field,
-            "operator": first.operator,
-            "value": json.dumps([r.model_dump() for r in c.rules]),
-            "unit": first.unit,
-            "needs_review": c.needs_review,
-        }
-
-    if c.rules and len(c.rules) == 1:
-        r = c.rules[0]
-        return {
-            "nct_id": nct_id,
-            "type": c.type,
-            "raw_text": c.text,
-            "field": r.field,
-            "operator": r.operator,
-            "value": json.dumps(r.value) if r.value is not None else None,
-            "unit": r.unit,
-            "needs_review": c.needs_review,
-        }
-
-    return {
-        "nct_id": nct_id,
-        "type": c.type,
-        "raw_text": c.text,
-        "field": c.field,
-        "operator": c.operator,
-        "value": json.dumps(c.value) if c.value is not None else None,
-        "unit": c.unit,
-        "needs_review": c.needs_review,
-    }
-
-
 @app.post("/trials/{nct_id}/parse-criteria", response_model=ParseCriteriaToDBResponse)
 async def parse_trial_criteria(nct_id: str):
     trial = await fetch_trial(nct_id)
@@ -196,7 +132,7 @@ async def parse_trial_criteria(nct_id: str):
 
     client.table("trial_criteria").delete().eq("nct_id", nct_id).execute()
 
-    rows = [_criterion_to_db_row(nct_id, c) for c in criteria]
+    rows = [criterion_to_db_row(nct_id, c) for c in criteria]
     inserted = client.table("trial_criteria").insert(rows).execute()
 
     return ParseCriteriaToDBResponse(
@@ -207,6 +143,50 @@ async def parse_trial_criteria(nct_id: str):
         needs_review=sum(1 for c in criteria if c.needs_review),
         criteria=[TrialCriterionRow(**row) for row in inserted.data],
     )
+
+
+@app.post("/trials/upload-document", response_model=UploadTrialResponse)
+async def upload_trial_document(file: UploadFile = File(...)):
+    """Researcher-portal trial creation from an uploaded protocol/summary
+    document (PDF, or a photo/scan) instead of a ClinicalTrials.gov NCT id
+    -- for a trial that has no ClinicalTrials.gov record (a house study, a
+    draft protocol). Gemini reads the title/phase/primary endpoint and the
+    eligibility criteria section (llm.extract_trial_document /
+    extract_trial_document_from_file), and that text is handed to the
+    EXISTING, unchanged parse_criteria -- same function the NCT-id flow
+    above calls. No new parsing/matching logic; just a new way to reach it."""
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty")
+    if len(content) > _MAX_UPLOAD_FILE_BYTES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File too large (max {_MAX_UPLOAD_FILE_BYTES // (1024 * 1024)}MB)",
+        )
+
+    client = get_client()
+    mime_type = file.content_type or ""
+    if mime_type == "text/plain":
+        try:
+            text = content.decode("utf-8")
+        except UnicodeDecodeError:
+            raise HTTPException(status_code=400, detail="Could not read this file as UTF-8 text")
+        if not text.strip():
+            raise HTTPException(status_code=400, detail="Uploaded file is empty")
+        result = ingest_trial_document(client, text)
+    elif mime_type in SUPPORTED_DOCUMENT_FILE_MIME_TYPES:
+        result = ingest_trial_document_file(client, content, mime_type)
+    else:
+        raise HTTPException(
+            status_code=415,
+            detail=f"Unsupported file type: {mime_type or 'unknown'}. "
+            "Upload a PDF, PNG, JPEG, or plain text file.",
+        )
+
+    if result.get("error"):
+        raise HTTPException(status_code=422, detail=result["error"])
+
+    return UploadTrialResponse(**{k: v for k, v in result.items() if k != "error"})
 
 
 @app.post("/trials/{nct_id}/match/{patient_id}", response_model=MatchResponse)
@@ -417,6 +397,91 @@ def upload_lab_report(patient_id: str, request: UploadLabRequest):
 
     result = ingest_lab_report(client, patient_id, request.text)
     return UploadLabResponse(patient_id=patient_id, **result)
+
+
+_MAX_UPLOAD_FILE_BYTES = 15 * 1024 * 1024  # 15MB -- comfortably under Gemini's inline-data limit
+
+
+@app.post("/patients/{patient_id}/upload-lab-file", response_model=UploadLabResponse)
+async def upload_lab_report_file(patient_id: str, file: UploadFile = File(...)):
+    """Same pipeline as /upload-lab, but for an uploaded file instead of
+    pasted text -- a PDF, or a photo/scan of a printed report. A plain-text
+    file is decoded and routed through the exact same text path as
+    /upload-lab; a PDF/PNG/JPEG is sent to Gemini as an inline document/
+    image part (llm.extract_lab_values_from_file) -- same Gemini client/
+    model, no local PDF/OCR library. No schema change."""
+    client = get_client()
+    patient_check = (
+        client.table("patients").select("patient_id").eq("patient_id", patient_id).limit(1).execute()
+    )
+    if not patient_check.data:
+        raise HTTPException(status_code=404, detail=f"Patient {patient_id} not found")
+
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty")
+    if len(content) > _MAX_UPLOAD_FILE_BYTES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File too large (max {_MAX_UPLOAD_FILE_BYTES // (1024 * 1024)}MB)",
+        )
+
+    mime_type = file.content_type or ""
+    if mime_type == "text/plain":
+        try:
+            text = content.decode("utf-8")
+        except UnicodeDecodeError:
+            raise HTTPException(status_code=400, detail="Could not read this file as UTF-8 text")
+        if not text.strip():
+            raise HTTPException(status_code=400, detail="Uploaded file is empty")
+        result = ingest_lab_report(client, patient_id, text)
+    elif mime_type in SUPPORTED_DOCUMENT_FILE_MIME_TYPES:
+        result = ingest_lab_report_file(client, patient_id, content, mime_type, file.filename)
+    else:
+        raise HTTPException(
+            status_code=415,
+            detail=f"Unsupported file type: {mime_type or 'unknown'}. "
+            "Upload a PDF, PNG, JPEG, or plain text file.",
+        )
+
+    return UploadLabResponse(patient_id=patient_id, **result)
+
+
+@app.post("/patients/{patient_id}/upload-document", response_model=UploadDocumentResponse)
+async def upload_patient_document(
+    patient_id: str, document_type: str = Form(...), file: UploadFile = File(...)
+):
+    """Patient-portal "supporting documents" upload -- referral letters,
+    imaging reports, medical reports, consent forms, or anything else the
+    patient wants on file, alongside the dedicated lab-report upload above.
+    Purely a filing action: no LLM extraction, just one patient_documents
+    row (document_upload.store_patient_document) so it's visible on the
+    patient's record. No schema change."""
+    if document_type not in SUPPORTED_DOCUMENT_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported document_type: {document_type!r}. "
+            f"Must be one of: {', '.join(sorted(SUPPORTED_DOCUMENT_TYPES))}.",
+        )
+
+    client = get_client()
+    patient_check = (
+        client.table("patients").select("patient_id").eq("patient_id", patient_id).limit(1).execute()
+    )
+    if not patient_check.data:
+        raise HTTPException(status_code=404, detail=f"Patient {patient_id} not found")
+
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty")
+    if len(content) > _MAX_UPLOAD_FILE_BYTES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File too large (max {_MAX_UPLOAD_FILE_BYTES // (1024 * 1024)}MB)",
+        )
+
+    result = store_patient_document(client, patient_id, document_type, content, file.filename)
+    return UploadDocumentResponse(patient_id=patient_id, **result)
 
 
 @app.post("/parse-criteria", response_model=ParseCriteriaResponse)

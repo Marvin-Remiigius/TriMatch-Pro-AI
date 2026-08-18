@@ -37,7 +37,7 @@ def _status_for_deviation(test_code: str, deviation: float) -> str:
     return "improved" if deviation < 0 else "worsened"
 
 
-def get_patient_test_progress(client, patient_id: str, baseline_date: str) -> list[dict]:
+def get_patient_test_progress(client, patient_id: str, baseline_date: str | None) -> list[dict]:
     """Returns one entry per test_code the patient has ANY lab_results for:
     baseline value/date/source, latest value/date/source, deviation, and
     status (improved/worsened/indeterminate/no_data)."""
@@ -59,7 +59,17 @@ def get_patient_test_progress(client, patient_id: str, baseline_date: str) -> li
         rows_sorted = sorted(rows, key=lambda r: r["test_date"])
         latest = rows_sorted[-1]
 
-        baseline_candidates = [r for r in rows_sorted if r["test_date"] <= baseline_date]
+        # baseline_date is None for a patient who withdrew before ever
+        # being enrolled (withdraw_patient allows withdrawing straight
+        # from invited/accepted/consented; only enroll_patient sets
+        # baseline_date) -- there's no anchor to compare against, so
+        # treat it the same as "no reading on/before baseline" below
+        # rather than guessing or crashing.
+        baseline_candidates = (
+            [r for r in rows_sorted if r["test_date"] <= baseline_date]
+            if baseline_date is not None
+            else []
+        )
         baseline = baseline_candidates[-1] if baseline_candidates else None
 
         if baseline is None:

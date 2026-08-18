@@ -1,5 +1,9 @@
+import json
+
 import httpx
 from fastapi import HTTPException
+
+from models import Criterion
 
 CLINICAL_TRIALS_API = "https://clinicaltrials.gov/api/v2/studies"
 
@@ -43,4 +47,69 @@ def to_trial_row(trial: dict) -> dict:
         "phase": ", ".join(phases) if phases else None,
         "status": trial.get("overall_status"),
         "primary_endpoint": trial.get("primary_endpoint"),
+    }
+
+
+def criterion_to_db_row(nct_id: str, c: Criterion) -> dict:
+    """Shapes a parsed Criterion into a trial_criteria row. No DB schema
+    change: a criterion with 0-1 rules is encoded exactly as before
+    (single scalar in `value`); a criterion with 2+ rules stores the full
+    rule list as JSON in that same `value` column (field/operator/unit
+    mirror the first rule, for backward compat with anything -- e.g.
+    coarse_filter.py -- that only reads the top-level columns). A criterion
+    with rule_groups (OR of AND-groups, for alternative pathways) stores
+    {"rule_groups": [[...], ...]} as JSON in the same `value` column -- a
+    JSON *object*, distinguishable from the flat rule-list *array* encoding
+    above, so db_matching.py can tell them apart without a schema change."""
+    if c.rule_groups:
+        first_group = c.rule_groups[0] if c.rule_groups else []
+        first = first_group[0] if first_group else None
+        return {
+            "nct_id": nct_id,
+            "type": c.type,
+            "raw_text": c.text,
+            "field": first.field if first else None,
+            "operator": first.operator if first else None,
+            "value": json.dumps(
+                {"rule_groups": [[r.model_dump() for r in group] for group in c.rule_groups]}
+            ),
+            "unit": first.unit if first else None,
+            "needs_review": c.needs_review,
+        }
+
+    if c.rules and len(c.rules) > 1:
+        first = c.rules[0]
+        return {
+            "nct_id": nct_id,
+            "type": c.type,
+            "raw_text": c.text,
+            "field": first.field,
+            "operator": first.operator,
+            "value": json.dumps([r.model_dump() for r in c.rules]),
+            "unit": first.unit,
+            "needs_review": c.needs_review,
+        }
+
+    if c.rules and len(c.rules) == 1:
+        r = c.rules[0]
+        return {
+            "nct_id": nct_id,
+            "type": c.type,
+            "raw_text": c.text,
+            "field": r.field,
+            "operator": r.operator,
+            "value": json.dumps(r.value) if r.value is not None else None,
+            "unit": r.unit,
+            "needs_review": c.needs_review,
+        }
+
+    return {
+        "nct_id": nct_id,
+        "type": c.type,
+        "raw_text": c.text,
+        "field": c.field,
+        "operator": c.operator,
+        "value": json.dumps(c.value) if c.value is not None else None,
+        "unit": c.unit,
+        "needs_review": c.needs_review,
     }
