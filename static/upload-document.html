@@ -47,6 +47,16 @@
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .mono { font-family: var(--font-mono); }
 
+  .icon {
+    width: 1em;
+    height: 1em;
+    flex-shrink: 0;
+    vertical-align: -0.15em;
+  }
+
+  .signout-btn, .btn { display: inline-flex; align-items: center; gap: 0.4rem; }
+  .results-headline { display: flex; align-items: center; gap: 0.5rem; }
+
   /* ---------- Session bar (shared shell) ---------- */
 
   .session-bar {
@@ -275,7 +285,7 @@
     <span class="role-badge role-patient">Supporting documents</span>
     <span class="session-name" id="sessionName"></span>
   </div>
-  <button class="signout-btn" id="signoutBtn">Sign out</button>
+  <button class="signout-btn" id="signoutBtn"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Sign out</button>
 </div>
 
 <main>
@@ -294,6 +304,7 @@
 
     <label for="documentFile">File</label>
     <label class="file-drop" for="documentFile" id="fileDropLabel">
+      <svg class="icon" style="width:20px;height:20px;color:var(--muted-2);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
       <span class="file-drop-name" id="fileDropName">Click to choose a file, or drag one here</span>
       <span class="file-drop-hint">Any common document format · up to 15MB</span>
     </label>
@@ -301,13 +312,13 @@
     <div class="sample-row">Try a sample: <a href="samples/sample-referral-letter.pdf" download>referral letter</a> · <a href="samples/sample-imaging-report.pdf" download>imaging report</a></div>
 
     <div class="panel-actions">
-      <button type="button" class="btn" id="submitBtn">Add to my record</button>
+      <button type="button" class="btn" id="submitBtn"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Add to my record</button>
     </div>
     <div class="status-line" id="statusLine"></div>
   </div>
 
   <div class="panel results-panel" id="resultsPanel">
-    <div class="results-headline" id="resultsHeadline">Added to your record</div>
+    <div class="results-headline" id="resultsHeadline"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Added to your record</div>
     <div class="results-source" id="resultsSource"></div>
     <button type="button" class="again-link" id="uploadAnotherBtn">Add another document</button>
   </div>

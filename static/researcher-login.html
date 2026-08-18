@@ -71,6 +71,22 @@
     flex-shrink: 0;
   }
 
+  .portal-icon .icon { width: 16px; height: 16px; }
+
+  .icon {
+    width: 1em;
+    height: 1em;
+    flex-shrink: 0;
+    vertical-align: -0.15em;
+  }
+
+  .btn-primary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
   h1 { font-size: 18px; font-weight: 600; margin: 0; }
 
   .sub {
@@ -133,7 +149,7 @@
   <a class="back-link" href="index.html">&larr; Back to TriMatch home</a>
 
   <div class="badge-row">
-    <div class="portal-icon">R</div>
+    <div class="portal-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M9 12l2 2 4-4"/></svg></div>
     <h1>Researcher sign in</h1>
   </div>
   <p class="sub">Enter your name to continue to the research dashboard.</p>
@@ -147,7 +163,7 @@
       <label for="orgInput">Organization <span style="text-transform:none; letter-spacing:0;">(optional)</span></label>
       <input type="text" id="orgInput" placeholder="e.g. Northview Research Institute" autocomplete="organization" />
     </div>
-    <button type="submit" class="btn-primary">Continue to dashboard</button>
+    <button type="submit" class="btn-primary"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>Continue to dashboard</button>
   </form>
 
   <div class="footnote">Demo sign-in — any name is accepted, nothing is stored beyond this browser session.</div>

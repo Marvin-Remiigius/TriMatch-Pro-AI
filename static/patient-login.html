@@ -72,6 +72,22 @@
     flex-shrink: 0;
   }
 
+  .portal-icon .icon { width: 16px; height: 16px; }
+
+  .icon {
+    width: 1em;
+    height: 1em;
+    flex-shrink: 0;
+    vertical-align: -0.15em;
+  }
+
+  .btn-primary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
   h1 { font-size: 18px; font-weight: 600; margin: 0; }
 
   .sub {
@@ -141,7 +157,7 @@
   <a class="back-link" href="index.html">&larr; Back to TriMatch home</a>
 
   <div class="badge-row">
-    <div class="portal-icon">P</div>
+    <div class="portal-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
     <h1>Patient sign in</h1>
   </div>
   <p class="sub">Enter your name and patient ID to see your trial invitations.</p>
@@ -156,7 +172,7 @@
       <input type="text" id="patientIdInput" placeholder="from your invitation letter or email" autocomplete="off" required />
       <div class="hint">This is the ID your research coordinator gave you — it's how we find your invitations.</div>
     </div>
-    <button type="submit" class="btn-primary">View my invitations</button>
+    <button type="submit" class="btn-primary"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>View my invitations</button>
   </form>
 
   <div class="footnote">Demo sign-in — any name is accepted, nothing is stored beyond this browser session.</div>

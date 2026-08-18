@@ -130,6 +130,8 @@
     font-weight: 600;
   }
 
+  .portal-icon .icon { width: 18px; height: 18px; }
+
   .portal-card.researcher .portal-icon { background: var(--accent-dim); color: var(--accent); }
   .portal-card.patient .portal-icon { background: var(--pass-dim); color: var(--pass); }
 
@@ -172,13 +174,13 @@
 
   <div class="portals">
     <a class="portal-card researcher" href="researcher-login.html">
-      <div class="portal-icon">R</div>
+      <div class="portal-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M9 12l2 2 4-4"/></svg></div>
       <div class="portal-title">Researcher Portal</div>
       <div class="portal-desc">Import trials, screen candidates against real patient data, track enrollment and trial-level outcomes.</div>
       <div class="portal-cta">Enter as researcher &rarr;</div>
     </a>
     <a class="portal-card patient" href="patient-login.html">
-      <div class="portal-icon">P</div>
+      <div class="portal-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
       <div class="portal-title">Patient Portal</div>
       <div class="portal-desc">Review trial invitations, read what a trial involves in plain language, and respond to consent requests.</div>
       <div class="portal-cta">Enter as patient &rarr;</div>

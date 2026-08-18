@@ -48,6 +48,16 @@
 
   .mono { font-family: var(--font-mono); }
 
+  .icon {
+    width: 1em;
+    height: 1em;
+    flex-shrink: 0;
+    vertical-align: -0.15em;
+  }
+
+  .section-title { display: flex; align-items: center; gap: 0.5rem; }
+  .section-title .icon { width: 15px; height: 15px; color: var(--muted); }
+
   /* ---------- Session bar (shared shell) ---------- */
 
   .session-bar {
@@ -185,6 +195,9 @@
   .invite-meta-value { font-family: var(--font-mono); color: var(--muted); font-size: 11.5px; margin-bottom: 0.75rem; }
 
   .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
     font-family: var(--font-mono);
     font-size: 10px;
     letter-spacing: 0.04em;
@@ -194,6 +207,7 @@
     white-space: nowrap;
     flex-shrink: 0;
   }
+  .status-pill .icon { width: 11px; height: 11px; }
 
   .status-pill.st-invited { background: var(--unknown-dim); color: var(--unknown); }
   .status-pill.st-accepted { background: var(--unknown-dim); color: var(--unknown); }
@@ -266,7 +280,7 @@
     <span class="role-badge role-patient">Patient Portal</span>
     <span class="session-name" id="sessionName"></span>
   </div>
-  <button class="signout-btn" id="signoutBtn">Sign out</button>
+  <button class="signout-btn" id="signoutBtn"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Sign out</button>
 </div>
 
 <main>
@@ -276,7 +290,7 @@
   <div class="portal-layout">
     <section class="section">
       <div class="section-header">
-        <div class="section-title">Trials &amp; consent</div>
+        <div class="section-title"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Trials &amp; consent</div>
         <div class="section-desc">Trials a research team has invited you to, or that you're currently part of. Open any invitation to review the trial and respond.</div>
       </div>
       <div id="content" class="skeleton">Loading your trial invitations…</div>
@@ -284,7 +298,7 @@
 
     <section class="section">
       <div class="section-header">
-        <div class="section-title">Documents</div>
+        <div class="section-title"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Documents</div>
         <div class="section-desc">Add records to your file.</div>
       </div>
       <div class="doc-panel">
@@ -293,14 +307,14 @@
             <div class="doc-action-title">Lab report</div>
             <div class="doc-action-sub">Paste it in and we'll read the values into your record automatically.</div>
           </div>
-          <a class="doc-action-btn" href="upload-lab.html">Upload &rarr;</a>
+          <a class="doc-action-btn" href="upload-lab.html"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Upload &rarr;</a>
         </div>
         <div class="doc-action">
           <div>
             <div class="doc-action-title">Supporting document</div>
             <div class="doc-action-sub">Referral letters, imaging reports, and other records for your care team.</div>
           </div>
-          <a class="doc-action-btn" href="upload-document.html">Add &rarr;</a>
+          <a class="doc-action-btn" href="upload-document.html"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Add &rarr;</a>
         </div>
       </div>
     </section>
@@ -347,6 +361,18 @@
     withdrawn: 'You withdrew from this trial. No further data is being collected.',
   };
 
+  // Same icon set/stroke style used everywhere in the app -- shapes
+  // reinforce the color+label coding on each status pill (helps at a
+  // glance, and for colorblind users).
+  const STATUS_ICON = {
+    invited: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+    accepted: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+    consented: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+    enrolled: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+    declined: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+    withdrawn: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>',
+  };
+
   const content = document.getElementById('content');
 
   async function init() {
@@ -360,7 +386,7 @@
       }
 
       if (!enrollments.length) {
-        content.innerHTML = `<div class="detail-empty">No trial invitations found for patient ID <span class="mono">${esc(patientId)}</span>. If you believe this is an error, check the ID with your research coordinator.</div>`;
+        content.innerHTML = `<div class="detail-empty"><svg class="icon" style="width:20px;height:20px;display:block;margin-bottom:0.6rem;color:var(--muted-2);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>No trial invitations found for patient ID <span class="mono">${esc(patientId)}</span>. If you believe this is an error, check the ID with your research coordinator.</div>`;
         return;
       }
 
@@ -388,7 +414,7 @@
           <div class="invite-card">
             <div class="invite-top">
               <div class="invite-title">${esc(trial.title || e.nct_id)}</div>
-              <span class="status-pill st-${esc(e.status)}" title="${esc(STATUS_HELP[e.status] || '')}">${esc(STATUS_LABEL[e.status] || e.status)}</span>
+              <span class="status-pill st-${esc(e.status)}" title="${esc(STATUS_HELP[e.status] || '')}">${STATUS_ICON[e.status] || ''} ${esc(STATUS_LABEL[e.status] || e.status)}</span>
             </div>
             <div><span class="invite-meta">Trial ID</span><span class="invite-meta-value">${esc(e.nct_id)}${phase ? ' · ' + esc(phase) : ''}</span></div>
             <div class="invite-action">${action}</div>

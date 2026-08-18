@@ -68,6 +68,22 @@
 
   .mono { font-family: var(--font-mono); }
 
+  .icon {
+    width: 1em;
+    height: 1em;
+    flex-shrink: 0;
+    vertical-align: -0.15em;
+  }
+
+  .signout-btn, #loadBtn, .example-btn, .upload-trial-toggle, .upload-trial-submit,
+  .tab-btn, .er-btn, .er-link, .verify-btn, .er-id-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .badge, .verdict-pill, .status-pill, .dev-pill, .trend-badge { display: inline-flex; align-items: center; gap: 0.3rem; }
+
   /* ---------- Session bar (shared shell) ---------- */
 
   .session-bar {
@@ -771,6 +787,8 @@
     margin: 0.6rem 0 1.1rem;
   }
 
+  .legend span { display: inline-flex; align-items: center; gap: 0.3rem; }
+
   .legend .dot {
     display: inline-block;
     width: 7px;
@@ -1045,6 +1063,8 @@
     color: var(--muted);
   }
 
+  .cohort-legend span { display: inline-flex; align-items: center; gap: 0.3rem; }
+
   .cohort-legend .dot {
     display: inline-block;
     width: 7px;
@@ -1198,7 +1218,7 @@
   </div>
   <div class="session-left">
     <span class="session-name" id="sessionName">Guest researcher</span>
-    <button class="signout-btn" id="signoutBtn">Sign out</button>
+    <button class="signout-btn" id="signoutBtn"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign out</button>
   </div>
 </div>
 
@@ -1207,28 +1227,29 @@
   <div class="load-row">
     <input type="text" id="nctInput" placeholder="NCT ID, e.g. NCT04280705" title="A ClinicalTrials.gov trial ID, or one of your own trial IDs" />
     <input type="number" id="patientCountInput" placeholder="Patients" value="30" min="1" max="1000" title="How many patients from the pool to evaluate against this trial's criteria" />
-    <button id="loadBtn">Load trial</button>
+    <button id="loadBtn"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Load trial</button>
   </div>
-  <button type="button" class="upload-trial-toggle" id="uploadTrialToggle">or upload a trial document &darr;</button>
+  <button type="button" class="upload-trial-toggle" id="uploadTrialToggle"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>or upload a trial document &darr;</button>
   <div class="trial-info" id="trialInfo"></div>
 </header>
 
 <div class="upload-trial-panel" id="uploadTrialPanel">
   <div class="upload-trial-row">
     <label class="trial-file-drop" for="trialDocFile" id="trialFileDropLabel">
+      <svg class="icon" style="width:16px;height:16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
       <span id="trialFileDropName">Click to choose a trial protocol/summary document, or drag one here</span>
     </label>
     <input type="file" id="trialDocFile" accept=".pdf,.png,.jpg,.jpeg,.txt,application/pdf,image/png,image/jpeg,text/plain" style="display:none;" />
-    <button type="button" class="upload-trial-submit" id="uploadTrialSubmit">Create trial from document</button>
+    <button type="button" class="upload-trial-submit" id="uploadTrialSubmit"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>Create trial from document</button>
   </div>
   <div class="upload-trial-sub">Reads the title, phase, and eligibility criteria from a PDF, photo/scan, or plain text file -- no ClinicalTrials.gov record needed. Try a <a href="samples/sample-trial-protocol.pdf" download>sample protocol</a>.</div>
   <div class="upload-trial-status" id="uploadTrialStatus"></div>
 </div>
 
 <div class="tab-row" id="tabRow">
-  <button class="tab-btn active" id="tabCandidates">Candidates</button>
-  <button class="tab-btn" id="tabProgress">Trial progress</button>
-  <button class="tab-btn" id="tabEnrollment">Enrollment &amp; consent</button>
+  <button class="tab-btn active" id="tabCandidates"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Candidates</button>
+  <button class="tab-btn" id="tabProgress"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Trial progress</button>
+  <button class="tab-btn" id="tabEnrollment"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Enrollment &amp; consent</button>
 </div>
 
 <div class="status-line" id="statusLine"></div>
@@ -1241,6 +1262,7 @@
       <div class="panel-list-header">Candidates</div>
       <div class="candidate-list" id="candidateList">
         <div class="empty-state">
+          <svg class="icon" style="width:22px;height:22px;display:block;margin-bottom:0.7rem;color:var(--muted-2);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <div class="empty-state-title">No trial loaded yet</div>
           <div class="empty-state-body">Enter a clinical trial ID above — an NCT number from ClinicalTrials.gov, or your own trial ID — then click "Load trial" to see ranked, eligible candidates.</div>
           <button type="button" class="example-btn" id="exampleBtnEmpty">Try example trial</button>
@@ -1398,9 +1420,36 @@
     return 'badge-' + overall.replace(/ /g, '_');
   }
 
+  // One consistent icon set for pass/fail/unknown -- reused for both the
+  // per-criterion verdict pills and the overall eligible/ineligible/needs
+  // more data badges, since they're the same color language. Shape
+  // reinforces color (helps colorblind users read verdicts at a glance).
+  const ICON_CHECK_CIRCLE = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
+  const ICON_X_CIRCLE = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
+  const ICON_HELP_CIRCLE = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+
+  function verdictIcon(verdict) {
+    return { pass: ICON_CHECK_CIRCLE, fail: ICON_X_CIRCLE, unknown: ICON_HELP_CIRCLE }[verdict] || '';
+  }
+
+  function overallIcon(overall) {
+    return { eligible: ICON_CHECK_CIRCLE, ineligible: ICON_X_CIRCLE, 'needs more data': ICON_HELP_CIRCLE }[overall] || '';
+  }
+
+  function trendIcon(status) {
+    const icons = {
+      improved: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>',
+      worsened: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>',
+      indeterminate: ICON_HELP_CIRCLE,
+      no_data: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>',
+    };
+    return icons[status] || '';
+  }
+
   function emptyStateHtml() {
     return `
       <div class="empty-state">
+        <svg class="icon" style="width:22px;height:22px;display:block;margin-bottom:0.7rem;color:var(--muted-2);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <div class="empty-state-title">No trial loaded yet</div>
         <div class="empty-state-body">Enter a clinical trial ID above — an NCT number from ClinicalTrials.gov, or your own trial ID — then click "Load trial" to see ranked, eligible candidates.</div>
         <button type="button" class="example-btn" id="exampleBtnEmpty">Try example trial</button>
@@ -1514,9 +1563,9 @@
           <div class="funnel-sub" title="A fast pre-filter narrows the full patient pool down to likely matches before the full criteria check runs on each one">${data.coarse_filtered_count} passed an initial screen · showing top ${data.returned}</div>
         </div>
         <div class="legend">
-          <span title="${esc(OVERALL_HELP.eligible)}"><span class="dot" style="background:var(--pass)"></span>Eligible</span>
-          <span title="${esc(OVERALL_HELP.ineligible)}"><span class="dot" style="background:var(--fail)"></span>Ineligible</span>
-          <span title="${esc(OVERALL_HELP['needs more data'])}"><span class="dot" style="background:var(--unknown)"></span>Needs more data</span>
+          <span title="${esc(OVERALL_HELP.eligible)}">${overallIcon('eligible')}Eligible</span>
+          <span title="${esc(OVERALL_HELP.ineligible)}">${overallIcon('ineligible')}Ineligible</span>
+          <span title="${esc(OVERALL_HELP['needs more data'])}">${overallIcon('needs more data')}Needs more data</span>
         </div>
       `;
 
@@ -1531,7 +1580,7 @@
           <button class="candidate" data-pid="${esc(c.patient_id)}">
             <div class="candidate-top">
               <span class="candidate-id mono" title="Patient ID (shortened) — open a candidate to see the full ID">${esc(shortId(c.patient_id))}</span>
-              <span class="badge ${badgeClass(c.overall)}" title="${esc(OVERALL_HELP[c.overall] || '')}">${esc(c.overall)}</span>
+              <span class="badge ${badgeClass(c.overall)}" title="${esc(OVERALL_HELP[c.overall] || '')}">${overallIcon(c.overall)}${esc(c.overall)}</span>
             </div>
             ${demo ? `<div class="candidate-demo">${esc(demo)}</div>` : ''}
             <div class="candidate-tally" title="Per-criterion results: how many the patient passed, failed, or has unknown/missing data for">${c.pass_count} pass · ${c.fail_count} fail · ${c.unknown_count} unknown</div>
@@ -1571,7 +1620,7 @@
       const verifyButton = (labResultId, patientValue, panelId) => {
         if (labResultId === null || labResultId === undefined) return '';
         const expected = JSON.stringify(patientValue === undefined ? null : patientValue);
-        return `<button class="verify-btn" data-lab-id="${esc(labResultId)}" data-expected='${esc(expected)}' data-panel="${panelId}" title="Fetch the original lab record and confirm it matches the value used here">Verify source &rarr;</button>`;
+        return `<button class="verify-btn" data-lab-id="${esc(labResultId)}" data-expected='${esc(expected)}' data-panel="${panelId}" title="Fetch the original lab record and confirm it matches the value used here"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Verify source</button>`;
       };
 
       const renderRuleBreakdown = (r) => {
@@ -1601,7 +1650,7 @@
         <div class="criterion">
           <div class="criterion-top">
             <div class="criterion-text">${esc(r.text)}</div>
-            <span class="verdict-pill verdict-${esc(r.verdict)}" title="${esc(VERDICT_HELP[r.verdict] || '')}">${esc(r.verdict)}</span>
+            <span class="verdict-pill verdict-${esc(r.verdict)}" title="${esc(VERDICT_HELP[r.verdict] || '')}">${verdictIcon(r.verdict)}${esc(r.verdict)}</span>
           </div>
           <div class="criterion-meta">
             ${r.patient_value !== null && r.patient_value !== undefined ? `<span title="The data field this criterion checks, and this patient's value for it"><span class="kv-label">${valueLabel}: </span><span class="kv-value">${esc(Array.isArray(r.patient_value) ? r.patient_value.join(', ') : r.patient_value)}</span></span>` : ''}
@@ -1617,12 +1666,12 @@
       detailPanel.innerHTML = `
         <div class="detail-header">
           <span class="id" title="Full patient ID — shortened here for display">${esc(shortId(patientId))}</span>
-          <span class="badge ${badgeClass(data.overall)}" title="${esc(OVERALL_HELP[data.overall] || '')}">${esc(data.overall)}</span>
+          <span class="badge ${badgeClass(data.overall)}" title="${esc(OVERALL_HELP[data.overall] || '')}">${overallIcon(data.overall)}${esc(data.overall)}</span>
         </div>
         <div class="legend">
-          <span title="${esc(VERDICT_HELP.pass)}"><span class="dot" style="background:var(--pass)"></span>Pass = criterion met</span>
-          <span title="${esc(VERDICT_HELP.fail)}"><span class="dot" style="background:var(--fail)"></span>Fail = not met</span>
-          <span title="${esc(VERDICT_HELP.unknown)}"><span class="dot" style="background:var(--unknown)"></span>Unknown = missing data</span>
+          <span title="${esc(VERDICT_HELP.pass)}">${verdictIcon('pass')}Pass = criterion met</span>
+          <span title="${esc(VERDICT_HELP.fail)}">${verdictIcon('fail')}Fail = not met</span>
+          <span title="${esc(VERDICT_HELP.unknown)}">${verdictIcon('unknown')}Unknown = missing data</span>
         </div>
         ${inclusions.length ? `<div class="eyebrow group-label" title="Requirements the patient must meet to qualify for this trial">Inclusion criteria</div>${inclusions.map(renderCriterion).join('')}` : ''}
         ${exclusions.length ? `<div class="eyebrow group-label" title="Conditions that would disqualify the patient from this trial">Exclusion criteria</div>${exclusions.map(renderCriterion).join('')}` : ''}
@@ -1747,10 +1796,10 @@
         <div class="cohort-title">Cohort trend by test — ${patients.length} enrolled patient${patients.length === 1 ? '' : 's'}</div>
         ${rows}
         <div class="cohort-legend">
-          <span><span class="dot" style="background:var(--pass)"></span>Improved</span>
-          <span><span class="dot" style="background:var(--fail)"></span>Worsened</span>
-          <span><span class="dot" style="background:var(--unknown)"></span>Indeterminate</span>
-          <span><span class="dot" style="background:var(--muted-2); opacity:0.5"></span>No follow-up data</span>
+          <span><span style="color:var(--pass)">${trendIcon('improved')}</span>Improved</span>
+          <span><span style="color:var(--fail)">${trendIcon('worsened')}</span>Worsened</span>
+          <span><span style="color:var(--unknown)">${trendIcon('indeterminate')}</span>Indeterminate</span>
+          <span><span style="color:var(--muted-2)">${trendIcon('no_data')}</span>No follow-up data</span>
         </div>
       </div>
     `;
@@ -1859,7 +1908,7 @@
       <div class="test-detail">
         <div class="test-detail-top">
           <span class="test-name">${esc(t.test_name)} <span class="mono" style="color: var(--muted); font-weight: 400;">(${esc(t.test_code)})</span></span>
-          <span class="dev-pill ${devClass(t.status)}" title="${esc({improved: 'Latest result is better than baseline', worsened: 'Latest result is worse than baseline', indeterminate: 'A newer result exists, but the direction of change is unclear for this test', no_data: 'No follow-up result recorded since baseline'}[t.status] || '')}"><span class="dev-dot ${devClass(t.status)}"></span>${esc(t.status.replace('_', ' '))}</span>
+          <span class="dev-pill ${devClass(t.status)}" title="${esc({improved: 'Latest result is better than baseline', worsened: 'Latest result is worse than baseline', indeterminate: 'A newer result exists, but the direction of change is unclear for this test', no_data: 'No follow-up result recorded since baseline'}[t.status] || '')}">${trendIcon(t.status)}${esc(t.status.replace('_', ' '))}</span>
         </div>
         <div class="test-readout-line" title="Baseline value at enrollment, compared to the most recent recorded value">
           Baseline ${fmtValue(t.baseline_value)}${t.unit ? ' ' + esc(t.unit) : ''} → Latest ${fmtValue(t.latest_value)}${t.unit ? ' ' + esc(t.unit) : ''}
@@ -1886,19 +1935,29 @@
     return 'st-' + status;
   }
 
+  const STATUS_ICON = {
+    not_invited: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>',
+    invited: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+    accepted: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+    consented: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+    enrolled: ICON_CHECK_CIRCLE,
+    declined: ICON_X_CIRCLE,
+    withdrawn: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>',
+  };
+
   function renderEnrollmentActions(patientId, status) {
     const buttons = [];
     if (status === 'not_invited') {
-      buttons.push(`<button class="er-btn" data-action="invite" data-pid="${esc(patientId)}" title="Send this patient a trial invitation">Send invite</button>`);
+      buttons.push(`<button class="er-btn" data-action="invite" data-pid="${esc(patientId)}" title="Send this patient a trial invitation"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>Send invite</button>`);
     }
     if (status === 'invited') {
-      buttons.push(`<a class="er-link" href="/consent.html?patient=${encodeURIComponent(patientId)}&trial=${encodeURIComponent(currentNctId)}" target="_blank" rel="noopener" title="Opens the patient-facing consent screen in a new tab">Open consent screen ↗</a>`);
+      buttons.push(`<a class="er-link" href="/consent.html?patient=${encodeURIComponent(patientId)}&trial=${encodeURIComponent(currentNctId)}" target="_blank" rel="noopener" title="Opens the patient-facing consent screen in a new tab"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Open consent screen</a>`);
     }
     if (status === 'consented') {
-      buttons.push(`<button class="er-btn" data-action="enroll" data-pid="${esc(patientId)}" title="Confirm enrollment now that the patient has consented — this sets their baseline date">Confirm enrollment</button>`);
+      buttons.push(`<button class="er-btn" data-action="enroll" data-pid="${esc(patientId)}" title="Confirm enrollment now that the patient has consented — this sets their baseline date"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Confirm enrollment</button>`);
     }
     if (['invited', 'accepted', 'consented', 'enrolled'].includes(status)) {
-      buttons.push(`<button class="er-btn danger" data-action="withdraw" data-pid="${esc(patientId)}" title="Withdraw this patient from the trial">Withdraw</button>`);
+      buttons.push(`<button class="er-btn danger" data-action="withdraw" data-pid="${esc(patientId)}" title="Withdraw this patient from the trial"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Withdraw</button>`);
     }
     return buttons.join('');
   }
@@ -1967,11 +2026,11 @@
       return `
         <div class="enrollment-row">
           <div class="er-top">
-            <button type="button" class="er-id-btn mono" data-full-id="${esc(c.patient_id)}" title="Click to copy the full patient ID -- share this with the patient so they can sign in to the patient portal">${esc(shortId(c.patient_id))}</button>
-            <span class="badge ${badgeClass(c.overall)}" title="${esc(OVERALL_HELP[c.overall] || '')}">${esc(c.overall)}</span>
+            <button type="button" class="er-id-btn mono" data-full-id="${esc(c.patient_id)}" title="Click to copy the full patient ID -- share this with the patient so they can sign in to the patient portal"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>${esc(shortId(c.patient_id))}</button>
+            <span class="badge ${badgeClass(c.overall)}" title="${esc(OVERALL_HELP[c.overall] || '')}">${overallIcon(c.overall)}${esc(c.overall)}</span>
           </div>
           <div class="candidate-demo">
-            <span class="status-pill ${statusPillClass(status)}" title="${esc(STATUS_HELP[status] || '')}">${esc(status.replace('_', ' '))}</span>
+            <span class="status-pill ${statusPillClass(status)}" title="${esc(STATUS_HELP[status] || '')}">${STATUS_ICON[status] || ''}${esc(status.replace('_', ' '))}</span>
           </div>
           <div class="er-actions">${renderEnrollmentActions(c.patient_id, status)}</div>
         </div>
@@ -2041,7 +2100,7 @@
         `;
       }).join('');
       auditPanel.innerHTML = `
-        <div class="eyebrow group-label" title="A permanent, timestamped log of every invite, consent, and enrollment action for this trial — who did what, and when">Audit trail</div>
+        <div class="eyebrow group-label" title="A permanent, timestamped log of every invite, consent, and enrollment action for this trial — who did what, and when" style="display:flex; align-items:center; gap:0.4rem;"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Audit trail</div>
         <div style="overflow-x: auto;">
           <table class="audit-table">
             <thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Patient</th><th>Status change</th></tr></thead>

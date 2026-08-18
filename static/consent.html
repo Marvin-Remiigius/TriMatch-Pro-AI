@@ -61,6 +61,21 @@
 
   .mono { font-family: var(--font-mono); }
 
+  .icon {
+    width: 1em;
+    height: 1em;
+    flex-shrink: 0;
+    vertical-align: -0.15em;
+  }
+
+  .section-title { display: flex; align-items: center; gap: 0.5rem; }
+  .section-title .icon { width: 15px; height: 15px; color: var(--muted); }
+
+  .btn { display: flex; align-items: center; justify-content: center; gap: 0.4rem; }
+  .withdraw-link { display: inline-flex; align-items: center; gap: 0.3rem; }
+  .status-pill { display: inline-flex; align-items: center; gap: 0.3rem; }
+  .trend-badge { display: inline-flex; align-items: center; gap: 0.25rem; }
+
   .card {
     width: 100%;
     max-width: 560px;
@@ -441,7 +456,7 @@
       const done = i < current || (i === current && status === 'enrolled');
       const active = i === current && status !== 'enrolled';
       const cls = done ? 'done' : active ? 'active' : '';
-      const mark = done ? '✓' : String(i + 1);
+      const mark = done ? '<svg class="icon" style="width:10px;height:10px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' : String(i + 1);
       html += `<div class="step ${cls}"><span class="dot">${mark}</span><span class="label">${label}</span></div>`;
       if (i < labels.length - 1) {
         html += `<div class="step-line ${i < current ? 'done' : ''}"></div>`;
@@ -453,6 +468,16 @@
 
   function trendLabel(status) {
     return { improved: 'Improved', worsened: 'Worsened', indeterminate: 'No clear trend', no_data: 'No follow-up data yet' }[status] || status;
+  }
+
+  function trendIcon(status) {
+    const icons = {
+      improved: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>',
+      worsened: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>',
+      indeterminate: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+      no_data: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>',
+    };
+    return icons[status] || '';
   }
 
   function trendHelp(status) {
@@ -467,7 +492,7 @@
   function renderWithdrawSection() {
     return `
       <div class="withdraw-row" id="withdrawRow">
-        <button class="withdraw-link" id="withdrawLink">Withdraw from this trial</button>
+        <button class="withdraw-link" id="withdrawLink"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Withdraw from this trial</button>
       </div>
     `;
   }
@@ -487,7 +512,7 @@
         </div>
       `;
       document.getElementById('cancelWithdraw').addEventListener('click', () => {
-        row.innerHTML = `<button class="withdraw-link" id="withdrawLink">Withdraw from this trial</button>`;
+        row.innerHTML = `<button class="withdraw-link" id="withdrawLink"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Withdraw from this trial</button>`;
         attachWithdrawHandler(onWithdrawn);
       });
       document.getElementById('confirmWithdraw').addEventListener('click', async (e) => {
@@ -536,7 +561,7 @@
                   <div class="name">${esc(t.test_name || t.test_code)}</div>
                   <div class="values">
                     ${t.baseline_value != null ? esc(t.baseline_value) : '—'} → ${t.latest_value != null ? esc(t.latest_value) : '—'}${t.unit ? ' ' + esc(t.unit) : ''}
-                    <div class="trend-badge trend-${esc(t.status)}" title="${esc(trendHelp(t.status))}">${esc(trendLabel(t.status))}</div>
+                    <div class="trend-badge trend-${esc(t.status)}" title="${esc(trendHelp(t.status))}">${trendIcon(t.status)}${esc(trendLabel(t.status))}</div>
                   </div>
                 </div>
               `).join('')}
@@ -555,7 +580,7 @@
         </div>
         <div class="section">
           <div class="section-header">
-            <div class="section-title">Your progress</div>
+            <div class="section-title"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Your progress</div>
             <div class="section-desc">How your latest results compare to your baseline.</div>
           </div>
           ${progressHtml}
@@ -640,8 +665,8 @@
       </div>
 
       <div class="actions">
-        <button class="btn btn-accept" id="acceptBtn">Accept &amp; consent</button>
-        <button class="btn btn-decline" id="declineBtn">Decline</button>
+        <button class="btn btn-accept" id="acceptBtn"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Accept &amp; consent</button>
+        <button class="btn btn-decline" id="declineBtn"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Decline</button>
       </div>
     `;
 

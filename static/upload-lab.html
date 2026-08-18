@@ -47,6 +47,17 @@
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .mono { font-family: var(--font-mono); }
 
+  .icon {
+    width: 1em;
+    height: 1em;
+    flex-shrink: 0;
+    vertical-align: -0.15em;
+  }
+
+  .signout-btn, .btn, .mode-btn, .sample-btn { display: inline-flex; align-items: center; gap: 0.4rem; }
+  .results-headline { display: flex; align-items: center; gap: 0.5rem; }
+  .flag-note { display: inline-flex; align-items: center; gap: 0.25rem; }
+
   /* ---------- Session bar (shared shell) ---------- */
 
   .session-bar {
@@ -353,7 +364,7 @@
     <span class="role-badge role-patient">Upload lab report</span>
     <span class="session-name" id="sessionName"></span>
   </div>
-  <button class="signout-btn" id="signoutBtn">Sign out</button>
+  <button class="signout-btn" id="signoutBtn"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Sign out</button>
 </div>
 
 <main>
@@ -362,21 +373,22 @@
 
   <div class="panel">
     <div class="mode-toggle">
-      <button type="button" class="mode-btn active" id="modeTextBtn">Paste text</button>
-      <button type="button" class="mode-btn" id="modeFileBtn">Upload file</button>
+      <button type="button" class="mode-btn active" id="modeTextBtn"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Paste text</button>
+      <button type="button" class="mode-btn" id="modeFileBtn"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Upload file</button>
     </div>
 
     <div class="mode-block active" id="textMode">
       <label for="reportText">Lab report text</label>
       <textarea id="reportText" placeholder="Paste your lab report text here…"></textarea>
       <div class="panel-actions">
-        <button type="button" class="sample-btn" id="fillSampleBtn">Use a sample report</button>
+        <button type="button" class="sample-btn" id="fillSampleBtn"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Use a sample report</button>
       </div>
     </div>
 
     <div class="mode-block" id="fileMode">
       <label for="reportFile">Lab report file</label>
       <label class="file-drop" for="reportFile" id="fileDropLabel">
+        <svg class="icon" style="width:20px;height:20px;color:var(--muted-2);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         <span class="file-drop-name" id="fileDropName">Click to choose a file, or drag one here</span>
         <span class="file-drop-hint">PDF, PNG, JPEG, or plain text · up to 15MB</span>
       </label>
@@ -384,7 +396,7 @@
     </div>
 
     <div class="panel-actions submit-row">
-      <button type="button" class="btn" id="submitBtn">Extract &amp; add to my record</button>
+      <button type="button" class="btn" id="submitBtn"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Extract &amp; add to my record</button>
     </div>
     <div class="status-line" id="statusLine"></div>
   </div>
@@ -554,7 +566,7 @@ Comments: Patient advised to continue current diet and follow up in 3 months.`;
       submitBtn.disabled = false;
 
       if (!data.extracted.length) {
-        resultsHeadline.textContent = 'No lab values found';
+        resultsHeadline.innerHTML = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>No lab values found';
         resultsHeadline.style.color = 'var(--unknown)';
         resultsSource.innerHTML = `We couldn't find any recognizable lab results in ${currentMode === 'file' ? 'that file' : 'that text'}. Try ${currentMode === 'file' ? 'a clearer copy of the report' : 'pasting the full report, including test names and values'}.`;
         labList.innerHTML = '';
@@ -563,7 +575,7 @@ Comments: Patient advised to continue current diet and follow up in 3 months.`;
         return;
       }
 
-      resultsHeadline.textContent = `Extracted ${data.extracted.length} lab value${data.extracted.length === 1 ? '' : 's'} and added to your record`;
+      resultsHeadline.innerHTML = `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Extracted ${data.extracted.length} lab value${data.extracted.length === 1 ? '' : 's'} and added to your record`;
       resultsHeadline.style.color = 'var(--pass)';
       resultsSource.innerHTML = `source: <span class="mono">${esc(data.document_name)}</span> · document #${esc(data.document_id)}`;
 
@@ -571,7 +583,7 @@ Comments: Patient advised to continue current diet and follow up in 3 months.`;
         <div class="lab-row">
           <div>
             <span class="lab-name">${esc(lab.test_name)}</span><span class="lab-code">${esc(lab.test_code)}</span>
-            ${lab.flagged_unmapped ? '<div class="flag-note" title="This test does not match one of our standard codes yet -- stored as-is, flagged for review.">unmapped code</div>' : ''}
+            ${lab.flagged_unmapped ? '<div class="flag-note" title="This test does not match one of our standard codes yet -- stored as-is, flagged for review."><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>unmapped code</div>' : ''}
           </div>
           <div class="lab-value mono">${esc(lab.value)}</div>
           <div class="lab-unit">${esc(lab.unit || '')} · ${esc(formatDate(lab.test_date))}</div>
