@@ -32,7 +32,13 @@
 
   body {
     margin: 0;
-    background: var(--bg);
+    background-color: var(--bg);
+    background-image:
+      radial-gradient(500px circle at 90% -5%, rgba(91, 141, 184, 0.10), transparent 70%),
+      radial-gradient(420px circle at 5% 30%, rgba(123, 167, 134, 0.06), transparent 70%),
+      radial-gradient(600px circle at 60% 100%, rgba(91, 141, 184, 0.07), transparent 70%);
+    background-attachment: fixed;
+    background-repeat: no-repeat;
     color: var(--text);
     font-family: var(--font-ui);
     font-size: 14px;
@@ -88,7 +94,7 @@
     transition: color var(--ease);
   }
   .home-link:hover { color: var(--accent); }
-  .home-mark { color: var(--pass); }
+  .home-mark { color: var(--pass); text-shadow: 0 0 8px currentColor; }
 
   .crumb-sep { color: var(--muted-2); font-size: 12px; }
 
@@ -266,9 +272,9 @@
     font-weight: 600;
     text-decoration: none;
     white-space: nowrap;
-    transition: background var(--ease);
+    transition: background var(--ease), box-shadow var(--ease);
   }
-  .doc-action-btn:hover { background: rgba(91, 141, 184, 0.24); }
+  .doc-action-btn:hover { background: rgba(91, 141, 184, 0.24); box-shadow: 0 0 16px rgba(91, 141, 184, 0.25); }
 </style>
 </head>
 <body>

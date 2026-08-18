@@ -33,7 +33,13 @@
 
   body {
     margin: 0;
-    background: var(--bg);
+    background-color: var(--bg);
+    background-image:
+      radial-gradient(460px circle at 90% -5%, rgba(91, 141, 184, 0.11), transparent 70%),
+      radial-gradient(400px circle at 5% 40%, rgba(123, 167, 134, 0.06), transparent 70%),
+      radial-gradient(560px circle at 60% 100%, rgba(91, 141, 184, 0.07), transparent 70%);
+    background-attachment: fixed;
+    background-repeat: no-repeat;
     color: var(--text);
     font-family: var(--font-ui);
     font-size: 14px;
@@ -178,7 +184,7 @@
     background: transparent;
     cursor: pointer;
     font-size: 13.5px;
-    transition: border-color var(--ease), background var(--ease), color var(--ease);
+    transition: border-color var(--ease), background var(--ease), color var(--ease), box-shadow var(--ease);
   }
 
   .btn-accept {
@@ -186,7 +192,7 @@
     color: var(--pass);
     border-color: transparent;
   }
-  .btn-accept:hover { background: rgba(123, 167, 134, 0.22); }
+  .btn-accept:hover { background: rgba(123, 167, 134, 0.22); box-shadow: 0 0 18px rgba(123, 167, 134, 0.25); }
 
   .btn-decline {
     color: var(--muted);
@@ -202,7 +208,7 @@
     padding: 1.25rem 1.4rem;
   }
 
-  .status-box.success { border-color: rgba(123, 167, 134, 0.35); }
+  .status-box.success { border-color: rgba(123, 167, 134, 0.35); box-shadow: 0 0 20px rgba(123, 167, 134, 0.08); }
   .status-box.declined { border-color: rgba(192, 106, 95, 0.35); }
 
   .status-box .headline {
@@ -256,7 +262,7 @@
     white-space: nowrap;
   }
 
-  .step.done .dot { background: var(--pass-dim); border-color: transparent; color: var(--pass); }
+  .step.done .dot { background: var(--pass-dim); border-color: transparent; color: var(--pass); box-shadow: 0 0 8px rgba(123, 167, 134, 0.4); }
   .step.done .label { color: var(--text); }
   .step.active .dot { border-color: var(--accent); color: var(--accent); }
   .step.active .label { color: var(--text); font-weight: 600; }
