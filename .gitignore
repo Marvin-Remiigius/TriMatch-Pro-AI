@@ -5,3 +5,5 @@ __pycache__/
 uvicorn.pid
 uvicorn_out.log
 uvicorn_err.log
+PLAN.md
+frontend example static/
