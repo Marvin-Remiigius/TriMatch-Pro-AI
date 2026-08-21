@@ -471,10 +471,12 @@
     flex-shrink: 0;
   }
 
-  /* Trial Progress tab only: the patient list scrolls in place instead of
-     the whole page, since it can run to hundreds of enrolled patients. The
-     metrics area above it (donut + cohort chart) stays put. */
-  #progressPanel {
+  /* All three tabs: the patient list scrolls in place instead of the whole
+     page, since it can run to hundreds of patients. The stats block above it
+     (funnel / metrics / enrollment summary) and its list header stay put. */
+  #progressPanel,
+  #candidatesPanel,
+  #enrollmentPanel {
     display: flex;
     flex-direction: column;
     position: sticky;
@@ -482,6 +484,11 @@
     align-self: start;
     max-height: 100vh;
     overflow: hidden;
+  }
+
+  #funnelArea,
+  #enrollmentSummary {
+    flex-shrink: 0;
   }
 
   /* Right side of the Progress tab: a fixed metrics summary panel stacked
@@ -498,7 +505,9 @@
     border-bottom: 1px solid var(--line);
   }
 
-  #progressList {
+  #progressList,
+  #candidateList,
+  #enrollmentList {
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
@@ -508,20 +517,30 @@
     scrollbar-color: var(--muted-2) transparent;
   }
 
-  #progressList::-webkit-scrollbar { width: 6px; }
-  #progressList::-webkit-scrollbar-track { background: transparent; }
-  #progressList::-webkit-scrollbar-thumb {
+  #progressList::-webkit-scrollbar,
+  #candidateList::-webkit-scrollbar,
+  #enrollmentList::-webkit-scrollbar { width: 6px; }
+  #progressList::-webkit-scrollbar-track,
+  #candidateList::-webkit-scrollbar-track,
+  #enrollmentList::-webkit-scrollbar-track { background: transparent; }
+  #progressList::-webkit-scrollbar-thumb,
+  #candidateList::-webkit-scrollbar-thumb,
+  #enrollmentList::-webkit-scrollbar-thumb {
     background: var(--muted-2);
     border-radius: var(--radius);
   }
 
   @media (max-width: 880px) {
-    #progressPanel {
+    #progressPanel,
+    #candidatesPanel,
+    #enrollmentPanel {
       position: static;
       max-height: none;
       overflow: visible;
     }
-    #progressList {
+    #progressList,
+    #candidateList,
+    #enrollmentList {
       overflow-y: visible;
     }
   }
@@ -1324,7 +1343,7 @@
 <div class="view active" id="viewCandidates">
   <div class="view-sub" id="candidatesViewSub" style="display:none">Patients ranked by how well they match this trial's eligibility criteria. Click any candidate for a full pass/fail breakdown.</div>
   <main class="workspace">
-    <section class="panel candidates-panel">
+    <section class="panel candidates-panel" id="candidatesPanel">
       <div id="funnelArea"></div>
       <div class="panel-list-header">Candidates</div>
       <div class="candidate-list" id="candidateList">
@@ -1364,7 +1383,7 @@
 <div class="view" id="viewEnrollment">
   <div class="view-sub">Invite candidates to the trial, track their consent status as it changes, and review a complete audit log of every action taken.</div>
   <main class="workspace">
-    <section class="panel candidates-panel">
+    <section class="panel candidates-panel" id="enrollmentPanel">
       <div id="enrollmentSummary"></div>
       <div class="panel-list-header">Candidates &amp; status</div>
       <div class="candidate-list" id="enrollmentList"></div>
@@ -1444,7 +1463,7 @@
     consented: 'Patient has consented; awaiting researcher enrollment.',
     enrolled: 'Enrolled in the trial — baseline set, progress is being tracked.',
     declined: 'Patient declined the invitation.',
-    withdrawn: 'Patient withdrew after previously accepting or enrolling.',
+    withdrawn: 'Withdrawn after previously accepting or enrolling — see the audit trail for who initiated it.',
   };
 
   let currentNctId = null;
@@ -2201,6 +2220,7 @@
         'consent.recorded': 'Consent recorded',
         'patient.enrolled': 'Enrollment confirmed',
         'patient.withdrawn': 'Patient withdrew',
+        'patient.withdrawn_by_researcher': 'Withdrawn by research team',
         'patient.declined': 'Patient declined',
       };
       const rows = data.map(row => {
@@ -2232,7 +2252,11 @@
 
   async function performAction(patientId, action) {
     try {
-      const res = await fetch(`/trials/${encodeURIComponent(currentNctId)}/patients/${encodeURIComponent(patientId)}/${action}`, { method: 'POST' });
+      // A withdrawal can come from either side, and the resulting status is
+      // identical, so the actor has to be stated explicitly -- anything this
+      // dashboard triggers is the research team acting, not the patient.
+      const qs = action === 'withdraw' ? '?actor=researcher' : '';
+      const res = await fetch(`/trials/${encodeURIComponent(currentNctId)}/patients/${encodeURIComponent(patientId)}/${action}${qs}`, { method: 'POST' });
       const data = await res.json();
       if (!res.ok) {
         setError(data.detail || 'Action failed.');

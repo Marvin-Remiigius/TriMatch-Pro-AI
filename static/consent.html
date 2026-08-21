@@ -609,7 +609,7 @@
         e.target.disabled = true;
         document.getElementById('cancelWithdraw').disabled = true;
         try {
-          const res = await fetch(`/trials/${encodeURIComponent(nctId)}/patients/${encodeURIComponent(patientId)}/withdraw`, { method: 'POST' });
+          const res = await fetch(`/trials/${encodeURIComponent(nctId)}/patients/${encodeURIComponent(patientId)}/withdraw?actor=patient`, { method: 'POST' });
           const data = await res.json();
           if (!res.ok) {
             renderError(data.detail || 'Could not process your withdrawal. Try again.');

@@ -13,7 +13,12 @@ Valid transitions only:
                                                 baseline-vs-latest comparison
                                                 depends on)
   decline: invited/accepted     -> declined   (terminal)
-  withdraw: invited/accepted/consented/enrolled -> withdrawn (terminal)
+  withdraw: invited/accepted/consented/enrolled -> withdrawn (terminal;
+                                                              initiated by
+                                                              either the
+                                                              patient or the
+                                                              researcher --
+                                                              see WITHDRAW_ACTIONS)
 
 Every transition appends one (or two, for consent) row to audit_log.
 audit_log is never updated or deleted -- each call is a plain insert.
@@ -122,7 +127,23 @@ def enroll_patient(client, patient_id: str, nct_id: str) -> dict:
     return _get_enrollment(client, patient_id, nct_id)
 
 
-def withdraw_patient(client, patient_id: str, nct_id: str) -> dict:
+# A withdrawal reaches the same 'withdrawn' status from two very different
+# places: the patient dropping out via the consent portal, or the research
+# team removing them from the trial. The status can't tell them apart, so
+# the audit trail has to -- each initiator gets its own actor and action.
+WITHDRAW_ACTIONS = {
+    "patient": "patient.withdrawn",
+    "researcher": "patient.withdrawn_by_researcher",
+}
+
+
+def withdraw_patient(client, patient_id: str, nct_id: str, actor: str = "patient") -> dict:
+    if actor not in WITHDRAW_ACTIONS:
+        raise InvalidTransitionError(
+            f"Unknown withdrawal actor '{actor}'; must be one of "
+            f"{sorted(WITHDRAW_ACTIONS)}."
+        )
+
     existing = _get_enrollment(client, patient_id, nct_id)
     active_states = {"invited", "accepted", "consented", "enrolled"}
     if existing is None or existing["status"] not in active_states:
@@ -137,8 +158,13 @@ def withdraw_patient(client, patient_id: str, nct_id: str) -> dict:
         {"status": "withdrawn", "withdrawn_at": now, "updated_at": now}
     ).eq("patient_id", patient_id).eq("nct_id", nct_id).execute()
     _log_audit(
-        client, "researcher", "patient.withdrawn", patient_id, nct_id,
-        {"from_status": from_status, "to_status": "withdrawn", "timestamp": now},
+        client, actor, WITHDRAW_ACTIONS[actor], patient_id, nct_id,
+        {
+            "from_status": from_status,
+            "to_status": "withdrawn",
+            "timestamp": now,
+            "initiated_by": actor,
+        },
     )
     return _get_enrollment(client, patient_id, nct_id)
 

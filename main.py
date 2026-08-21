@@ -1,3 +1,5 @@
+from typing import Literal
+
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse
@@ -347,9 +349,16 @@ def enroll(nct_id: str, patient_id: str):
 
 
 @app.post("/trials/{nct_id}/patients/{patient_id}/withdraw", response_model=EnrollmentRecord)
-def withdraw(nct_id: str, patient_id: str):
+def withdraw(nct_id: str, patient_id: str, actor: Literal["patient", "researcher"]):
+    """`actor` says who initiated the withdrawal -- the patient dropping out
+    from the consent portal, or the research team removing them from the
+    trial. Both land on status 'withdrawn', so this is the only thing that
+    keeps the two apart in the audit trail. It is required rather than
+    defaulted: a default would quietly attribute every caller that omits it
+    (a stale browser tab, say) to one side, which is exactly the kind of
+    wrong-but-plausible row an audit trail must never contain."""
     client = get_client()
-    return _run_transition(withdraw_patient, client, patient_id, nct_id)
+    return _run_transition(withdraw_patient, client, patient_id, nct_id, actor)
 
 
 @app.post("/trials/{nct_id}/patients/{patient_id}/decline", response_model=EnrollmentRecord)
@@ -577,4 +586,18 @@ def flagged_for_review_endpoint(
     return get_flagged_for_review(nct_id=nct_id, patient_id=patient_id, limit=limit)
 
 
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
+class NoCacheHTMLStatic(StaticFiles):
+    """The pages under static/ are the client half of this API -- a browser
+    holding yesterday's copy calls today's endpoints with yesterday's
+    parameters. Hashed asset names would be the production answer; for a
+    single-server app with hand-written pages, revalidating each HTML load
+    is simpler and costs one 304."""
+
+    async def get_response(self, path: str, scope):
+        response = await super().get_response(path, scope)
+        if path.endswith(".html") or response.media_type == "text/html":
+            response.headers["cache-control"] = "no-cache"
+        return response
+
+
+app.mount("/", NoCacheHTMLStatic(directory="static", html=True), name="static")

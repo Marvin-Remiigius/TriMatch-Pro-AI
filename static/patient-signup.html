@@ -28,7 +28,7 @@
   }
 
   * { box-sizing: border-box; }
-  html, body { height: 100%; }
+  html { height: 100%; }
 
   body {
     margin: 0;
@@ -46,6 +46,11 @@
     -webkit-font-smoothing: antialiased;
     display: flex;
     justify-content: center;
+    /* flex-start, not the default stretch: this form is taller than the
+       viewport, and stretching would cap the card at the viewport height so
+       the lower fields spilled outside its background/border. */
+    align-items: flex-start;
+    min-height: 100%;
     padding: 3rem 1.25rem;
   }
 
